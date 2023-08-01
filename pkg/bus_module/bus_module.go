@@ -58,12 +58,12 @@ func (Self *BusModule) rechargePaidHandle(record shared.RechargeRecord) {
 	go func() {
 		retry := 0
 		for {
-			// 重试3次
-			if retry++; retry > 3 {
+			// 重试5次
+			if retry++; retry > 5 {
 				Self.logger.Printf("rechargePaidHandle Error: maximum retry limit")
 				return
 			}
-			time.Sleep(time.Minute * time.Duration(retry))
+			time.Sleep(time.Minute * 2 * time.Duration(retry-1)) // 0/2/4/6/8 min
 			request, err := http.NewRequest("POST", record.CallbackUrl, bytes.NewBuffer(record.ExternalData))
 			if err != nil {
 				Self.logger.Printf("rechargePaidHandle Error: %s", err)
