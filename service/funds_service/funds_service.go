@@ -163,7 +163,6 @@ func (Self *FundsService) listenRecharge() {
 								return
 							}
 						}
-						log.Println("归集成功")
 					}(uint32(record.WalletIndex), record.Token)
 				}
 				// 移除钱包Recharging状态
