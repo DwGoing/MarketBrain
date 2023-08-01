@@ -8,5 +8,5 @@ type Configs struct {
 	WalletMaxNumber   int64              `mapstructure:"WALLET_MAX_NUMBER"`
 	ExpireTime        int64              `mapstructure:"EXPIRE_TIME"`
 	ExpireDelay       int64              `mapstructure:"EXPIRE_DELAY"`
-	CollectThresholds map[string]float64 `mapstructure:"COLLECT_THRESHOLDS"`
+	CollectThresholds map[string]float32 `mapstructure:"COLLECT_THRESHOLDS"`
 }

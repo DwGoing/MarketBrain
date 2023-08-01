@@ -38,12 +38,12 @@ func init() {
 
 type ConfigModuleConstructFunc func(impl *ConfigModule) (*ConfigModule, error)
 type configModule_ struct {
-	Load_ func(cache bool) (*shared.Configs, error)
+	Load_ func() (*shared.Configs, error)
 	Set_  func(key string, value any) error
 }
 
-func (c *configModule_) Load(cache bool) (*shared.Configs, error) {
-	return c.Load_(cache)
+func (c *configModule_) Load() (*shared.Configs, error) {
+	return c.Load_()
 }
 
 func (c *configModule_) Set(key string, value any) error {
@@ -51,7 +51,7 @@ func (c *configModule_) Set(key string, value any) error {
 }
 
 type ConfigModuleIOCInterface interface {
-	Load(cache bool) (*shared.Configs, error)
+	Load() (*shared.Configs, error)
 	Set(key string, value any) error
 }
 

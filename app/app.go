@@ -10,6 +10,7 @@ import (
 	"funds-system/controller"
 	"funds-system/docs"
 	"funds-system/service/chain_service"
+	"funds-system/service/config_service"
 	"funds-system/service/funds_service"
 
 	"github.com/alibaba/ioc-golang/extension/config"
@@ -23,11 +24,12 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewApp
 type App struct {
-	GinPort         *config.ConfigInt64         `config:",app.gin.port"`
-	GrpcPort        *config.ConfigInt64         `config:",app.grpc.port"`
-	ChainService    *chain_service.ChainService `singleton:""`
-	FundsService    *funds_service.FundsService `singleton:""`
-	FundsController *controller.FundsController `singleton:""`
+	GinPort         *config.ConfigInt64           `config:",app.gin.port"`
+	GrpcPort        *config.ConfigInt64           `config:",app.grpc.port"`
+	ConfigService   *config_service.ConfigService `singleton:""`
+	ChainService    *chain_service.ChainService   `singleton:""`
+	FundsService    *funds_service.FundsService   `singleton:""`
+	FundsController *controller.FundsController   `singleton:""`
 
 	logger *log.Logger
 }
@@ -88,6 +90,7 @@ func (Self *App) Initialize() {
 			Self.logger.Fatalf("gRPC初始化失败:%s", err)
 		}
 		server := grpc.NewServer()
+		config_service.RegisterConfigServiceServer(server, Self.ConfigService)
 		chain_service.RegisterChainServiceServer(server, Self.ChainService)
 		funds_service.RegisterFundsServiceServer(server, Self.FundsService)
 		Self.logger.Printf("gRPC正在监听: %s", listener.Addr())

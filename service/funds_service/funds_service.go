@@ -134,7 +134,7 @@ func (Self *FundsService) listenRecharge() {
 				// 通知消息总线
 				Self.BusModule.RechargePaid <- record
 				// 归集检查
-				configs, err := Self.ConfigModule.Load(true)
+				configs, err := Self.ConfigModule.Load()
 				if err != nil {
 					return
 				}
@@ -247,7 +247,7 @@ func (Self *FundsService) transfer(from *hd_wallet.Wallet, to common.Address, to
 @return _ 		error 				异常信息
 */
 func (Self *FundsService) collect(from *hd_wallet.Wallet, to common.Address, token common.Address) error {
-	configs, err := Self.ConfigModule.Load(true)
+	configs, err := Self.ConfigModule.Load()
 	if err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func (Self *FundsService) collect(from *hd_wallet.Wallet, to common.Address, tok
 @return 		_ 		error 						异常信息
 */
 func (Self *FundsService) GetCollectionWallet(ctx context.Context, request *emptypb.Empty) (*GetCollectionWalletResponse, error) {
-	configs, err := Self.ConfigModule.Load(true)
+	configs, err := Self.ConfigModule.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +401,7 @@ func (Self *FundsService) GetRechargeWallet(ctx context.Context, request *GetRec
 	if err != nil {
 		return nil, err
 	}
-	configs, err := Self.ConfigModule.Load(true)
+	configs, err := Self.ConfigModule.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +583,7 @@ type FundsCollectResult struct {
 @return 		_ 		error 					异常信息
 */
 func (Self *FundsService) FundsCollect(ctx context.Context, request *FundsCollectRequest) (*emptypb.Empty, error) {
-	configs, err := Self.ConfigModule.Load(true)
+	configs, err := Self.ConfigModule.Load()
 	if err != nil {
 		return nil, err
 	}
