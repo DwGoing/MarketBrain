@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"funds-system/internal/chain_module"
+	"github.com/DwGoing/funds-system/internal/chain_module"
 )
 
 // +ioc:autowire=true

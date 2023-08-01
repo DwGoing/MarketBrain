@@ -3,7 +3,7 @@ package config_service
 import (
 	context "context"
 
-	"funds-system/internal/config_module"
+	"github.com/DwGoing/funds-system/internal/config_module"
 
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )

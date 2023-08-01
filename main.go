@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"funds-system/app"
+	"github.com/DwGoing/funds-system/app"
 
 	"github.com/alibaba/ioc-golang"
 	"github.com/alibaba/ioc-golang/config"

@@ -1,4 +1,4 @@
-module funds-system
+module github.com/DwGoing/funds-system
 
 go 1.20
 

@@ -6,7 +6,7 @@
 package config_module
 
 import (
-	"funds-system/pkg/shared"
+	"github.com/DwGoing/funds-system/pkg/shared"
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	singleton "github.com/alibaba/ioc-golang/autowire/singleton"

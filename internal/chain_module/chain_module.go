@@ -9,7 +9,7 @@ import (
 	"math/rand"
 	"time"
 
-	"funds-system/pkg/hd_wallet"
+	"github.com/DwGoing/funds-system/pkg/hd_wallet"
 
 	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"

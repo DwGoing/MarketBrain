@@ -7,11 +7,11 @@ import (
 	"net"
 	"os"
 
-	"funds-system/controller"
-	"funds-system/docs"
-	"funds-system/internal/chain_service"
-	"funds-system/internal/config_service"
-	"funds-system/internal/funds_service"
+	"github.com/DwGoing/funds-system/controller"
+	"github.com/DwGoing/funds-system/docs"
+	"github.com/DwGoing/funds-system/internal/chain_service"
+	"github.com/DwGoing/funds-system/internal/config_service"
+	"github.com/DwGoing/funds-system/internal/funds_service"
 
 	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/gin-gonic/gin"

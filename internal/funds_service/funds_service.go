@@ -10,12 +10,12 @@ import (
 	sync "sync"
 	"time"
 
-	"funds-system/internal/bus_module"
-	"funds-system/internal/chain_module"
-	"funds-system/internal/config_module"
-	"funds-system/pkg/hd_wallet"
-	"funds-system/pkg/shared"
-	"funds-system/pkg/storage_module"
+	"github.com/DwGoing/funds-system/internal/bus_module"
+	"github.com/DwGoing/funds-system/internal/chain_module"
+	"github.com/DwGoing/funds-system/internal/config_module"
+	"github.com/DwGoing/funds-system/pkg/hd_wallet"
+	"github.com/DwGoing/funds-system/pkg/shared"
+	"github.com/DwGoing/funds-system/pkg/storage_module"
 
 	linq "github.com/ahmetb/go-linq/v3"
 	"github.com/ethereum/go-ethereum/common"

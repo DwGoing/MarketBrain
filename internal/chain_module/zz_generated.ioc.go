@@ -7,12 +7,13 @@ package chain_module
 
 import (
 	"crypto/ecdsa"
-	"funds-system/pkg/hd_wallet"
+	"math/big"
+
+	"github.com/DwGoing/funds-system/pkg/hd_wallet"
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	singleton "github.com/alibaba/ioc-golang/autowire/singleton"
 	util "github.com/alibaba/ioc-golang/autowire/util"
-	"math/big"
 )
 
 func init() {

@@ -2,9 +2,10 @@ package controller
 
 import (
 	"context"
-	"funds-system/internal/config_service"
-	"funds-system/pkg/shared"
 	"net/http"
+
+	"github.com/DwGoing/funds-system/internal/config_service"
+	"github.com/DwGoing/funds-system/pkg/shared"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/types/known/emptypb"

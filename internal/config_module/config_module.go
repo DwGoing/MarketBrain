@@ -4,8 +4,8 @@ import (
 	"errors"
 	"reflect"
 
-	"funds-system/pkg/shared"
-	"funds-system/pkg/storage_module"
+	"github.com/DwGoing/funds-system/pkg/shared"
+	"github.com/DwGoing/funds-system/pkg/storage_module"
 
 	"github.com/ahmetb/go-linq"
 	"github.com/mitchellh/mapstructure"
