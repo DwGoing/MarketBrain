@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -31,7 +30,6 @@ type FundsController struct {
 @return _ 			error 				异常信息
 */
 func NewFundsController(controller *FundsController) (*FundsController, error) {
-	log.Println(123)
 	return controller, nil
 }
 

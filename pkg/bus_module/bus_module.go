@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"funds-system/pkg/shared"
@@ -14,7 +13,6 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewBusModule
 type BusModule struct {
-	logger       *log.Logger
 	RechargePaid chan shared.RechargeRecord
 }
 
@@ -25,7 +23,6 @@ type BusModule struct {
 @return _ 		error 		异常信息
 */
 func NewBusModule(module *BusModule) (*BusModule, error) {
-	module.logger = log.New(os.Stdout, "[BusModule]", log.LstdFlags)
 	module.RechargePaid = make(chan shared.RechargeRecord, 1024)
 	// 开启监听事件
 	go module.listenEvent()
@@ -54,29 +51,29 @@ func (Self *BusModule) listenEvent() {
 @param 	record 	shared.RechargeRecord 	充值记录
 */
 func (Self *BusModule) rechargePaidHandle(record shared.RechargeRecord) {
-	Self.logger.Printf("%s 充值完成", record.Id)
+	log.Printf("%s 充值完成", record.Id)
 	go func() {
 		retry := 0
 		for {
 			// 重试5次
 			if retry++; retry > 5 {
-				Self.logger.Printf("rechargePaidHandle Error: maximum retry limit")
+				log.Printf("rechargePaidHandle Error: maximum retry limit")
 				return
 			}
 			time.Sleep(time.Minute * 2 * time.Duration(retry-1)) // 0/2/4/6/8 min
 			request, err := http.NewRequest("POST", record.CallbackUrl, bytes.NewBuffer(record.ExternalData))
 			if err != nil {
-				Self.logger.Printf("rechargePaidHandle Error: %s", err)
+				log.Printf("rechargePaidHandle Error: %s", err)
 				continue
 			}
 			httpResponse, err := http.DefaultClient.Do(request)
 			if err != nil {
-				Self.logger.Printf("rechargePaidHandle Error: %s", err)
+				log.Printf("rechargePaidHandle Error: %s", err)
 				continue
 			}
 			defer httpResponse.Body.Close()
 			if httpResponse.StatusCode != http.StatusOK {
-				Self.logger.Printf("rechargePaidHandle Error: status code not 200")
+				log.Printf("rechargePaidHandle Error: status code not 200")
 				continue
 			}
 			return

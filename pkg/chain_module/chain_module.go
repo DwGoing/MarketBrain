@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
-	"log"
 	"math"
 	"math/big"
 	"math/rand"
-	"os"
 	"time"
 
 	"funds-system/pkg/hd_wallet"
@@ -25,9 +23,8 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewChainModule
 type ChainModule struct {
-	Nodes *config.ConfigSlice `config:",funds.nodes"`
+	Nodes *config.ConfigSlice `config:",chain.nodes"`
 
-	logger   *log.Logger
 	decimals map[common.Address]uint8
 }
 
@@ -38,7 +35,6 @@ type ChainModule struct {
 @return _ 		error 			异常信息
 */
 func NewChainModule(module *ChainModule) (*ChainModule, error) {
-	module.logger = log.New(os.Stdout, "[ChainModule]", log.LstdFlags)
 	module.decimals = make(map[common.Address]uint8)
 	return module, nil
 }

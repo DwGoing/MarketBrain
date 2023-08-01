@@ -12,12 +12,12 @@ import (
 
 	"funds-system/pkg/bus_module"
 	"funds-system/pkg/chain_module"
+	"funds-system/pkg/config_module"
 	"funds-system/pkg/hd_wallet"
 	"funds-system/pkg/shared"
 	"funds-system/pkg/storage_module"
 
 	linq "github.com/ahmetb/go-linq/v3"
-	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -29,14 +29,10 @@ import (
 type FundsService struct {
 	UnimplementedFundsServiceServer
 
-	Mnemonic          *config.ConfigString          `config:",funds.mnemonic"`
-	WalletMaxNumber   *config.ConfigInt64           `config:",funds.walletMaxNumber"`
-	ExpireTime        *config.ConfigInt64           `config:",funds.expireTime"`
-	ExpireDelay       *config.ConfigInt64           `config:",funds.expireDelay"`
-	CollectThresholds *config.ConfigMap             `config:",funds.collectThresholds"`
-	StorageModule     *storage_module.StorageModule `singleton:""`
-	BusModule         *bus_module.BusModule         `singleton:""`
-	ChainModule       *chain_module.ChainModule     `singleton:""`
+	ConfigModule  *config_module.ConfigModule   `singleton:""`
+	StorageModule *storage_module.StorageModule `singleton:""`
+	BusModule     *bus_module.BusModule         `singleton:""`
+	ChainModule   *chain_module.ChainModule     `singleton:""`
 
 	logger *log.Logger
 }
@@ -138,7 +134,11 @@ func (Self *FundsService) listenRecharge() {
 				// 通知消息总线
 				Self.BusModule.RechargePaid <- record
 				// 归集检查
-				if threshold, ok := Self.CollectThresholds.Value()[record.Token]; ok {
+				configs, err := Self.ConfigModule.Load(true)
+				if err != nil {
+					return
+				}
+				if threshold, ok := configs.CollectThresholds[record.Token]; ok {
 					thresholdString := fmt.Sprint(threshold)
 					go func(index uint32, token string) {
 						thresholdBigFloat, ok := new(big.Float).SetString(thresholdString)
@@ -150,7 +150,7 @@ func (Self *FundsService) listenRecharge() {
 							return
 						}
 						if balance.Cmp(convertedThreshold) >= 0 {
-							hdWallet, err := Self.ChainModule.GetHDWallet(Self.Mnemonic.Value(), "")
+							hdWallet, err := Self.ChainModule.GetHDWallet(configs.Mnemonic, "")
 							if err != nil {
 								return
 							}
@@ -247,7 +247,11 @@ func (Self *FundsService) transfer(from *hd_wallet.Wallet, to common.Address, to
 @return _ 		error 				异常信息
 */
 func (Self *FundsService) collect(from *hd_wallet.Wallet, to common.Address, token common.Address) error {
-	hdWallet, err := Self.ChainModule.GetHDWallet(Self.Mnemonic.Value(), "")
+	configs, err := Self.ConfigModule.Load(true)
+	if err != nil {
+		return err
+	}
+	hdWallet, err := Self.ChainModule.GetHDWallet(configs.Mnemonic, "")
 	if err != nil {
 		return err
 	}
@@ -326,7 +330,11 @@ func (Self *FundsService) collect(from *hd_wallet.Wallet, to common.Address, tok
 @return 		_ 		error 						异常信息
 */
 func (Self *FundsService) GetCollectionWallet(ctx context.Context, request *emptypb.Empty) (*GetCollectionWalletResponse, error) {
-	hdWallet, err := Self.ChainModule.GetHDWallet(Self.Mnemonic.Value(), "")
+	configs, err := Self.ConfigModule.Load(true)
+	if err != nil {
+		return nil, err
+	}
+	hdWallet, err := Self.ChainModule.GetHDWallet(configs.Mnemonic, "")
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +401,11 @@ func (Self *FundsService) GetRechargeWallet(ctx context.Context, request *GetRec
 	if err != nil {
 		return nil, err
 	}
-	hdWallet, err := Self.ChainModule.GetHDWallet(Self.Mnemonic.Value(), "")
+	configs, err := Self.ConfigModule.Load(true)
+	if err != nil {
+		return nil, err
+	}
+	hdWallet, err := Self.ChainModule.GetHDWallet(configs.Mnemonic, "")
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +431,7 @@ func (Self *FundsService) GetRechargeWallet(ctx context.Context, request *GetRec
 			value = value + 1
 			redis.call("SET", key, value)
 			return value`,
-			[]string{"WALLET_INDEX"}, Self.WalletMaxNumber.Value(),
+			[]string{"WALLET_INDEX"}, configs.WalletMaxNumber,
 		).Result()
 		if err != nil {
 			Self.logger.Printf("GetRechargeWallet Error: %s", err)
@@ -446,7 +458,7 @@ func (Self *FundsService) GetRechargeWallet(ctx context.Context, request *GetRec
 			Self.logger.Printf("GetRechargeWallet Error: %s", err)
 			continue
 		}
-		duration := time.Second * time.Duration(Self.ExpireTime.Value()+Self.ExpireDelay.Value())
+		duration := time.Second * time.Duration(configs.ExpireTime+configs.ExpireDelay)
 		record = shared.RechargeRecord{
 			Record: shared.Record{
 				Id:        uuid.NewString(),
@@ -571,14 +583,18 @@ type FundsCollectResult struct {
 @return 		_ 		error 					异常信息
 */
 func (Self *FundsService) FundsCollect(ctx context.Context, request *FundsCollectRequest) (*emptypb.Empty, error) {
-	hdWallet, err := Self.ChainModule.GetHDWallet(Self.Mnemonic.Value(), "")
+	configs, err := Self.ConfigModule.Load(true)
+	if err != nil {
+		return nil, err
+	}
+	hdWallet, err := Self.ChainModule.GetHDWallet(configs.Mnemonic, "")
 	if err != nil {
 		return nil, err
 	}
 	channel := make(chan FundsCollectResult, 1024)
 	// 任务监听
 	go func(c chan FundsCollectResult) {
-		taskNumber := Self.WalletMaxNumber.Value()
+		taskNumber := configs.WalletMaxNumber
 		var current int64
 		for {
 			select {
@@ -597,7 +613,7 @@ func (Self *FundsService) FundsCollect(ctx context.Context, request *FundsCollec
 		}
 	}(channel)
 	// 转账任务
-	for i := 1; i <= int(Self.WalletMaxNumber.Value()); i++ {
+	for i := 1; i <= int(configs.WalletMaxNumber); i++ {
 		go func(index uint32, c chan FundsCollectResult) {
 			result := FundsCollectResult{}
 			wallet, err := hdWallet.GetWallet(index)

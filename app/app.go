@@ -23,8 +23,8 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewApp
 type App struct {
-	GinPort         *config.ConfigInt64         `config:",host.gin.port"`
-	GrpcPort        *config.ConfigInt64         `config:",host.grpc.port"`
+	GinPort         *config.ConfigInt64         `config:",app.gin.port"`
+	GrpcPort        *config.ConfigInt64         `config:",app.grpc.port"`
 	ChainService    *chain_service.ChainService `singleton:""`
 	FundsService    *funds_service.FundsService `singleton:""`
 	FundsController *controller.FundsController `singleton:""`
