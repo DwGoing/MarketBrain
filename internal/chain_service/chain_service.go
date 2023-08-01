@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"funds-system/pkg/chain_module"
+	"funds-system/internal/chain_module"
 )
 
 // +ioc:autowire=true

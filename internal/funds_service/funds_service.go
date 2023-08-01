@@ -10,9 +10,9 @@ import (
 	sync "sync"
 	"time"
 
-	"funds-system/pkg/bus_module"
-	"funds-system/pkg/chain_module"
-	"funds-system/pkg/config_module"
+	"funds-system/internal/bus_module"
+	"funds-system/internal/chain_module"
+	"funds-system/internal/config_module"
 	"funds-system/pkg/hd_wallet"
 	"funds-system/pkg/shared"
 	"funds-system/pkg/storage_module"

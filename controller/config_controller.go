@@ -2,8 +2,8 @@ package controller
 
 import (
 	"context"
+	"funds-system/internal/config_service"
 	"funds-system/pkg/shared"
-	"funds-system/service/config_service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

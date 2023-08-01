@@ -9,9 +9,9 @@ import (
 
 	"funds-system/controller"
 	"funds-system/docs"
-	"funds-system/service/chain_service"
-	"funds-system/service/config_service"
-	"funds-system/service/funds_service"
+	"funds-system/internal/chain_service"
+	"funds-system/internal/config_service"
+	"funds-system/internal/funds_service"
 
 	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/gin-gonic/gin"

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"funds-system/internal/funds_service"
 	"funds-system/pkg/shared"
-	"funds-system/service/funds_service"
 
 	"github.com/ahmetb/go-linq"
 	"github.com/ethereum/go-ethereum/common"
