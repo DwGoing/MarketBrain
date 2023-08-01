@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "./;chain_service";
+
+service ChainService {
+    rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
+}
+
+message GetBalanceRequest {
+    string address = 1;
+    string token = 2;
+}
+
+message GetBalanceResponse {
+    string balance = 1;
+}

@@ -1,0 +1,91 @@
+definitions:
+  controller.GetRechargeWalletRequest:
+    properties:
+      amount:
+        type: string
+      callbackUrl:
+        type: string
+      externalData:
+        items:
+          type: integer
+        type: array
+      externalIdentity:
+        type: string
+      token:
+        type: string
+    type: object
+  controller.GetRechargeWalletResponse:
+    properties:
+      address:
+        type: string
+      code:
+        type: integer
+      expireAt:
+        type: integer
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /v1/funds/getRechargeRecords:
+    get:
+      parameters:
+      - description: 充值记录Id
+        in: query
+        name: id
+        type: string
+      - description: 外部标识
+        in: query
+        name: externalIdentity
+        type: string
+      - description: 充值Token
+        in: query
+        name: token
+        type: string
+      - description: 创建开始时间戳
+        in: query
+        name: createdStart
+        type: integer
+      - description: 创建结束时间戳
+        in: query
+        name: createdEnd
+        type: integer
+      - description: 页面大小
+        in: query
+        name: pageSize
+        type: integer
+      - description: 页码
+        in: query
+        name: pageIndex
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.GetRechargeWalletResponse'
+      summary: 获取充值记录
+  /v1/funds/getRechargeWallet:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ' '
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controller.GetRechargeWalletRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.GetRechargeWalletResponse'
+      summary: 获取充值钱包
+swagger: "2.0"
