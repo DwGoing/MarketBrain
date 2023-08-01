@@ -24,12 +24,13 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewApp
 type App struct {
-	GinPort         *config.ConfigInt64           `config:",app.gin.port"`
-	GrpcPort        *config.ConfigInt64           `config:",app.grpc.port"`
-	ConfigService   *config_service.ConfigService `singleton:""`
-	ChainService    *chain_service.ChainService   `singleton:""`
-	FundsService    *funds_service.FundsService   `singleton:""`
-	FundsController *controller.FundsController   `singleton:""`
+	GinPort          *config.ConfigInt64           `config:",app.gin.port"`
+	GrpcPort         *config.ConfigInt64           `config:",app.grpc.port"`
+	ConfigService    *config_service.ConfigService `singleton:""`
+	ChainService     *chain_service.ChainService   `singleton:""`
+	FundsService     *funds_service.FundsService   `singleton:""`
+	ConfigController *controller.ConfigController  `singleton:""`
+	FundsController  *controller.FundsController   `singleton:""`
 
 	logger *log.Logger
 }
@@ -69,9 +70,14 @@ func (Self *App) Initialize() {
 			log.Printf("%s", body)
 			defer ctx.Request.Body.Close()
 		})
-		v1 := engine.Group("/v1")
+		v1Router := engine.Group("/v1")
 		{
-			fundsRouter := v1.Group("/funds")
+			configRouter := v1Router.Group("config")
+			{
+				configRouter.GET("/load", Self.ConfigController.Load)
+				configRouter.POST("/set", Self.ConfigController.Set)
+			}
+			fundsRouter := v1Router.Group("/funds")
 			{
 				fundsRouter.POST("/getRechargeWallet", Self.FundsController.GetRechargeWallet)
 				fundsRouter.GET("/getRechargeRecords", Self.FundsController.GetRechargeRecords)

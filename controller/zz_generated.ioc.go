@@ -16,6 +16,26 @@ import (
 func init() {
 	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
 		Factory: func() interface{} {
+			return &configController_{}
+		},
+	})
+	configControllerStructDescriptor := &autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &ConfigController{}
+		},
+		ConstructFunc: func(i interface{}, _ interface{}) (interface{}, error) {
+			impl := i.(*ConfigController)
+			var constructFunc ConfigControllerConstructFunc = NewConfigController
+			return constructFunc(impl)
+		},
+		Metadata: map[string]interface{}{
+			"aop":      map[string]interface{}{},
+			"autowire": map[string]interface{}{},
+		},
+	}
+	singleton.RegisterStructDescriptor(configControllerStructDescriptor)
+	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
+		Factory: func() interface{} {
 			return &fundsController_{}
 		},
 	})
@@ -36,7 +56,21 @@ func init() {
 	singleton.RegisterStructDescriptor(fundsControllerStructDescriptor)
 }
 
+type ConfigControllerConstructFunc func(impl *ConfigController) (*ConfigController, error)
 type FundsControllerConstructFunc func(impl *FundsController) (*FundsController, error)
+type configController_ struct {
+	Load_ func(ctx *gin.Context)
+	Set_  func(ctx *gin.Context)
+}
+
+func (c *configController_) Load(ctx *gin.Context) {
+	c.Load_(ctx)
+}
+
+func (c *configController_) Set(ctx *gin.Context) {
+	c.Set_(ctx)
+}
+
 type fundsController_ struct {
 	GetRechargeWallet_  func(ctx *gin.Context)
 	GetRechargeRecords_ func(ctx *gin.Context)
@@ -50,9 +84,48 @@ func (f *fundsController_) GetRechargeRecords(ctx *gin.Context) {
 	f.GetRechargeRecords_(ctx)
 }
 
+type ConfigControllerIOCInterface interface {
+	Load(ctx *gin.Context)
+	Set(ctx *gin.Context)
+}
+
 type FundsControllerIOCInterface interface {
 	GetRechargeWallet(ctx *gin.Context)
 	GetRechargeRecords(ctx *gin.Context)
+}
+
+var _configControllerSDID string
+
+func GetConfigControllerSingleton() (*ConfigController, error) {
+	if _configControllerSDID == "" {
+		_configControllerSDID = util.GetSDIDByStructPtr(new(ConfigController))
+	}
+	i, err := singleton.GetImpl(_configControllerSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(*ConfigController)
+	return impl, nil
+}
+
+func GetConfigControllerIOCInterfaceSingleton() (ConfigControllerIOCInterface, error) {
+	if _configControllerSDID == "" {
+		_configControllerSDID = util.GetSDIDByStructPtr(new(ConfigController))
+	}
+	i, err := singleton.GetImplWithProxy(_configControllerSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(ConfigControllerIOCInterface)
+	return impl, nil
+}
+
+type ThisConfigController struct {
+}
+
+func (t *ThisConfigController) This() ConfigControllerIOCInterface {
+	thisPtr, _ := GetConfigControllerIOCInterfaceSingleton()
+	return thisPtr
 }
 
 var _fundsControllerSDID string

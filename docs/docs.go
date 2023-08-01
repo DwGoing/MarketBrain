@@ -16,6 +16,49 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/v1/config/load": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "加载配置",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controller.LoadResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/config/set": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "修改配置",
+                "parameters": [
+                    {
+                        "description": " ",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.SetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/v1/funds/getRechargeRecords": {
             "get": {
                 "produces": [
@@ -148,6 +191,58 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "controller.LoadResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "collectThresholds": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "expireDelay": {
+                    "type": "integer"
+                },
+                "expireTime": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "mnemonic": {
+                    "type": "string"
+                },
+                "walletMaxNumber": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controller.SetRequest": {
+            "type": "object",
+            "properties": {
+                "collectThresholds": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "expireDelay": {
+                    "type": "integer"
+                },
+                "expireTime": {
+                    "type": "integer"
+                },
+                "mnemonic": {
+                    "type": "string"
+                },
+                "walletMaxNumber": {
+                    "type": "integer"
                 }
             }
         }
