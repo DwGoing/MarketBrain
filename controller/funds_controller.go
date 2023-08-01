@@ -101,6 +101,8 @@ type GetRechargeRecordsResponseResultItem struct {
 	Token            string `json:"token,omitempty"`
 	Amount           string `json:"amount,omitempty"`
 	WalletAddress    string `json:"walletAddress,omitempty"`
+	Status           string `json:"status,omitempty"`
+	ExpireAt         string `json:"expireAt,omitempty"`
 }
 
 type GetRechargeRecordsResponse struct {
@@ -227,6 +229,8 @@ func (Self *FundsController) GetRechargeRecords(ctx *gin.Context) {
 			Token:            item.Token,
 			Amount:           item.Amount,
 			WalletAddress:    item.WalletAddress,
+			Status:           item.Status,
+			ExpireAt:         item.ExpireAt,
 		}
 	}).ToSlice(&result)
 	ctx.JSON(http.StatusOK, GetRechargeRecordsResponse{

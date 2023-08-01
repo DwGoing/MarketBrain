@@ -40,6 +40,8 @@ message RechargeRecord{
     string token = 7;
     string amount = 8;
     string walletAddress = 9;
+    string status = 10;
+    string expireAt = 11;
 }
 
 message GetRechargeRecordsRequest{

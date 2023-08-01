@@ -545,6 +545,8 @@ func (Self *FundsService) GetRechargeRecords(ctx context.Context, request *GetRe
 			Token:            item.Token,
 			Amount:           unconvertedValue.Text('f', 6),
 			WalletAddress:    item.WalletAddress,
+			Status:           item.Status.String(),
+			ExpireAt:         item.ExpireAt.String(),
 		}
 	}).ToSlice(&rechargeOrders)
 	return &GetRechargeRecordsResponse{

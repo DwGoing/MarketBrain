@@ -8,7 +8,7 @@ const (
 	TransferStatus_FAILED  TransferStatus = 2
 )
 
-func (e TransferStatus) ToString() string {
+func (e TransferStatus) String() string {
 	switch e {
 	case TransferStatus_SUCCESS:
 		return "SUCCESS"
