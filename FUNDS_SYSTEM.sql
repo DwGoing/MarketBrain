@@ -11,11 +11,32 @@
  Target Server Version : 80033
  File Encoding         : 65001
 
- Date: 01/08/2023 15:19:36
+ Date: 02/08/2023 14:59:26
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for CONFIG
+-- ----------------------------
+DROP TABLE IF EXISTS `CONFIG`;
+CREATE TABLE `CONFIG` (
+  `KEY` varchar(255) NOT NULL,
+  `VALUE` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci,
+  PRIMARY KEY (`KEY`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- ----------------------------
+-- Records of CONFIG
+-- ----------------------------
+BEGIN;
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('COLLECT_THRESHOLDS', '{\"0x466DD1e48570FAA2E7f69B75139813e4F8EF75c2\":5}');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('EXPIRE_DELAY', '900');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('EXPIRE_TIME', '1800');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('MNEMONIC', '\"increase squeeze thank version toast soap deposit dove garbage margin metal repair\"');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('WALLET_MAX_NUMBER', '10');
+COMMIT;
 
 -- ----------------------------
 -- Table structure for RECHARGE_RECORD
@@ -40,6 +61,12 @@ CREATE TABLE `RECHARGE_RECORD` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 ROW_FORMAT=DYNAMIC;
 
 -- ----------------------------
+-- Records of RECHARGE_RECORD
+-- ----------------------------
+BEGIN;
+COMMIT;
+
+-- ----------------------------
 -- Table structure for TRANSFER_RECORD
 -- ----------------------------
 DROP TABLE IF EXISTS `TRANSFER_RECORD`;
@@ -57,5 +84,11 @@ CREATE TABLE `TRANSFER_RECORD` (
   `REMARKS` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- ----------------------------
+-- Records of TRANSFER_RECORD
+-- ----------------------------
+BEGIN;
+COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
