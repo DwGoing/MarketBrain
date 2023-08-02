@@ -30,7 +30,7 @@ func NewConfigService(service *ConfigService) (*ConfigService, error) {
 /*
 @title	加载配置
 @param 	Self	*ConfigService 	服务实例
-@param 	ctx		context.Context 上下文
+@param 	ctx		context.Context 请求上下文
 @param 	request	*LoadRequest 	请求体
 @return _ 		*emptypb.Empty 	响应体
 @return _ 		error 			异常信息
@@ -52,7 +52,7 @@ func (Self *ConfigService) Load(ctx context.Context, request *emptypb.Empty) (*L
 /*
 @title	修改配置
 @param 	Self	*ConfigService 	服务实例
-@param 	ctx		context.Context 上下文
+@param 	ctx		context.Context 请求上下文
 @param 	request	*SetRequest 	请求体
 @return _ 		*emptypb.Empty 	响应体
 @return _ 		error 			异常信息

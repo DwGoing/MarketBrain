@@ -9,11 +9,12 @@ service FundsService {
     rpc GetRechargeWallet (GetRechargeWalletRequest) returns (GetRechargeWalletResponse) {}
     rpc GetRechargeRecords (GetRechargeRecordsRequest) returns (GetRechargeRecordsResponse) {}
     rpc FundsCollect (FundsCollectRequest) returns (google.protobuf.Empty) {}
+    rpc Transfer (TransferRequest) returns (google.protobuf.Empty) {}
 }
 
 message GetCollectionWalletResponse {
     string address = 1;
-    uint64 balance = 2;
+    string balance = 2;
 }
 
 message GetRechargeWalletRequest {
@@ -58,4 +59,11 @@ message GetRechargeRecordsResponse{
 message FundsCollectRequest{
     string to = 1;
     string token = 2;
+}
+
+message TransferRequest{
+    string to = 1;
+    string token = 2;
+    string amount = 3;
+    string remarks = 4;
 }

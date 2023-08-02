@@ -30,6 +30,7 @@ type App struct {
 	ChainService     *chain_service.ChainService   `singleton:""`
 	FundsService     *funds_service.FundsService   `singleton:""`
 	ConfigController *controller.ConfigController  `singleton:""`
+	ChainController  *controller.ChainController   `singleton:""`
 	FundsController  *controller.FundsController   `singleton:""`
 
 	logger *log.Logger
@@ -76,6 +77,10 @@ func (Self *App) Initialize() {
 			{
 				configRouter.GET("/load", Self.ConfigController.Load)
 				configRouter.POST("/set", Self.ConfigController.Set)
+			}
+			chainRouter := v1Router.Group("/chain")
+			{
+				chainRouter.GET("/getBalance", Self.ChainController.GetBalance)
 			}
 			fundsRouter := v1Router.Group("/funds")
 			{

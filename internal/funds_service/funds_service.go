@@ -347,9 +347,13 @@ func (Self *FundsService) GetCollectionWallet(ctx context.Context, request *empt
 	if err != nil {
 		return nil, err
 	}
+	unconvertedBalance, err := Self.ChainModule.UnconvertValue("0x0", balance)
+	if err != nil {
+		return nil, err
+	}
 	return &GetCollectionWalletResponse{
 		Address: address,
-		Balance: balance.Uint64(),
+		Balance: unconvertedBalance.String(),
 	}, nil
 }
 
@@ -638,6 +642,41 @@ func (Self *FundsService) FundsCollect(ctx context.Context, request *FundsCollec
 			c <- result
 		}(uint32(i), channel)
 		time.Sleep(time.Millisecond * 500)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+/*
+@title	从归集钱包转账
+@param 	Self 	*FundsService 		服务实例
+@param 	ctx 	context.Context 	请求上下文
+@param 	request *TransferRequest 	接收地址
+@return _ 		error 				异常信息
+*/
+func (Self *FundsService) Transfer(ctx context.Context, request *TransferRequest) (*emptypb.Empty, error) {
+	configs, err := Self.ConfigModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	hdWallet, err := Self.ChainModule.GetHDWallet(configs.Mnemonic, "")
+	if err != nil {
+		return nil, err
+	}
+	wallet, err := hdWallet.GetWallet(0)
+	if err != nil {
+		return nil, err
+	}
+	amount, ok := new(big.Float).SetString(request.Amount)
+	if !ok {
+		return nil, errors.New("amount invaild")
+	}
+	convertedAmount, err := Self.ChainModule.ConvertValue(request.Token, amount)
+	if err != nil {
+		return nil, err
+	}
+	err = Self.transfer(wallet, common.HexToAddress(request.To), common.HexToAddress(request.Token), convertedAmount, request.Remarks)
+	if err != nil {
+		return nil, err
 	}
 	return &emptypb.Empty{}, nil
 }

@@ -1,4 +1,13 @@
 definitions:
+  controller.GetBalanceResponse:
+    properties:
+      balance:
+        type: string
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
   controller.GetRechargeWalletRequest:
     properties:
       amount:
@@ -64,6 +73,26 @@ definitions:
 info:
   contact: {}
 paths:
+  /v1/chain/getBalance:
+    get:
+      parameters:
+      - description: 查询地址
+        in: query
+        name: address
+        required: true
+        type: string
+      - description: 查询Token
+        in: query
+        name: token
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.GetBalanceResponse'
+      summary: 查询余额
   /v1/config/load:
     get:
       produces:

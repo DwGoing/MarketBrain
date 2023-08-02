@@ -16,6 +16,37 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/v1/chain/getBalance": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "查询余额",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "查询地址",
+                        "name": "address",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "查询Token",
+                        "name": "token",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controller.GetBalanceResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/load": {
             "get": {
                 "produces": [
@@ -151,6 +182,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "controller.GetBalanceResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "controller.GetRechargeWalletRequest": {
             "type": "object",
             "properties": {

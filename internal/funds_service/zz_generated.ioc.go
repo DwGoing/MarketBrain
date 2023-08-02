@@ -43,6 +43,7 @@ type fundsService_ struct {
 	GetRechargeWallet_   func(ctx contextx.Context, request *GetRechargeWalletRequest) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords_  func(ctx contextx.Context, request *GetRechargeRecordsRequest) (*GetRechargeRecordsResponse, error)
 	FundsCollect_        func(ctx contextx.Context, request *FundsCollectRequest) (*emptypb.Empty, error)
+	Transfer_            func(ctx contextx.Context, request *TransferRequest) (*emptypb.Empty, error)
 }
 
 func (f *fundsService_) GetCollectionWallet(ctx contextx.Context, request *emptypb.Empty) (*GetCollectionWalletResponse, error) {
@@ -61,11 +62,16 @@ func (f *fundsService_) FundsCollect(ctx contextx.Context, request *FundsCollect
 	return f.FundsCollect_(ctx, request)
 }
 
+func (f *fundsService_) Transfer(ctx contextx.Context, request *TransferRequest) (*emptypb.Empty, error) {
+	return f.Transfer_(ctx, request)
+}
+
 type FundsServiceIOCInterface interface {
 	GetCollectionWallet(ctx contextx.Context, request *emptypb.Empty) (*GetCollectionWalletResponse, error)
 	GetRechargeWallet(ctx contextx.Context, request *GetRechargeWalletRequest) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords(ctx contextx.Context, request *GetRechargeRecordsRequest) (*GetRechargeRecordsResponse, error)
 	FundsCollect(ctx contextx.Context, request *FundsCollectRequest) (*emptypb.Empty, error)
+	Transfer(ctx contextx.Context, request *TransferRequest) (*emptypb.Empty, error)
 }
 
 var _fundsServiceSDID string

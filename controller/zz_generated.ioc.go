@@ -16,6 +16,26 @@ import (
 func init() {
 	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
 		Factory: func() interface{} {
+			return &chainController_{}
+		},
+	})
+	chainControllerStructDescriptor := &autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &ChainController{}
+		},
+		ConstructFunc: func(i interface{}, _ interface{}) (interface{}, error) {
+			impl := i.(*ChainController)
+			var constructFunc ChainControllerConstructFunc = NewChainController
+			return constructFunc(impl)
+		},
+		Metadata: map[string]interface{}{
+			"aop":      map[string]interface{}{},
+			"autowire": map[string]interface{}{},
+		},
+	}
+	singleton.RegisterStructDescriptor(chainControllerStructDescriptor)
+	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
+		Factory: func() interface{} {
 			return &configController_{}
 		},
 	})
@@ -56,8 +76,17 @@ func init() {
 	singleton.RegisterStructDescriptor(fundsControllerStructDescriptor)
 }
 
+type ChainControllerConstructFunc func(impl *ChainController) (*ChainController, error)
 type ConfigControllerConstructFunc func(impl *ConfigController) (*ConfigController, error)
 type FundsControllerConstructFunc func(impl *FundsController) (*FundsController, error)
+type chainController_ struct {
+	GetBalance_ func(ctx *gin.Context)
+}
+
+func (c *chainController_) GetBalance(ctx *gin.Context) {
+	c.GetBalance_(ctx)
+}
+
 type configController_ struct {
 	Load_ func(ctx *gin.Context)
 	Set_  func(ctx *gin.Context)
@@ -84,6 +113,10 @@ func (f *fundsController_) GetRechargeRecords(ctx *gin.Context) {
 	f.GetRechargeRecords_(ctx)
 }
 
+type ChainControllerIOCInterface interface {
+	GetBalance(ctx *gin.Context)
+}
+
 type ConfigControllerIOCInterface interface {
 	Load(ctx *gin.Context)
 	Set(ctx *gin.Context)
@@ -92,6 +125,40 @@ type ConfigControllerIOCInterface interface {
 type FundsControllerIOCInterface interface {
 	GetRechargeWallet(ctx *gin.Context)
 	GetRechargeRecords(ctx *gin.Context)
+}
+
+var _chainControllerSDID string
+
+func GetChainControllerSingleton() (*ChainController, error) {
+	if _chainControllerSDID == "" {
+		_chainControllerSDID = util.GetSDIDByStructPtr(new(ChainController))
+	}
+	i, err := singleton.GetImpl(_chainControllerSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(*ChainController)
+	return impl, nil
+}
+
+func GetChainControllerIOCInterfaceSingleton() (ChainControllerIOCInterface, error) {
+	if _chainControllerSDID == "" {
+		_chainControllerSDID = util.GetSDIDByStructPtr(new(ChainController))
+	}
+	i, err := singleton.GetImplWithProxy(_chainControllerSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(ChainControllerIOCInterface)
+	return impl, nil
+}
+
+type ThisChainController struct {
+}
+
+func (t *ThisChainController) This() ChainControllerIOCInterface {
+	thisPtr, _ := GetChainControllerIOCInterfaceSingleton()
+	return thisPtr
 }
 
 var _configControllerSDID string

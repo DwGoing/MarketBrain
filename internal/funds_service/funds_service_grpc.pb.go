@@ -27,6 +27,7 @@ type FundsServiceClient interface {
 	GetRechargeWallet(ctx context.Context, in *GetRechargeWalletRequest, opts ...grpc.CallOption) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords(ctx context.Context, in *GetRechargeRecordsRequest, opts ...grpc.CallOption) (*GetRechargeRecordsResponse, error)
 	FundsCollect(ctx context.Context, in *FundsCollectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type fundsServiceClient struct {
@@ -73,6 +74,15 @@ func (c *fundsServiceClient) FundsCollect(ctx context.Context, in *FundsCollectR
 	return out, nil
 }
 
+func (c *fundsServiceClient) Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/FundsService/Transfer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FundsServiceServer is the server API for FundsService service.
 // All implementations must embed UnimplementedFundsServiceServer
 // for forward compatibility
@@ -81,6 +91,7 @@ type FundsServiceServer interface {
 	GetRechargeWallet(context.Context, *GetRechargeWalletRequest) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords(context.Context, *GetRechargeRecordsRequest) (*GetRechargeRecordsResponse, error)
 	FundsCollect(context.Context, *FundsCollectRequest) (*emptypb.Empty, error)
+	Transfer(context.Context, *TransferRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFundsServiceServer()
 }
 
@@ -99,6 +110,9 @@ func (UnimplementedFundsServiceServer) GetRechargeRecords(context.Context, *GetR
 }
 func (UnimplementedFundsServiceServer) FundsCollect(context.Context, *FundsCollectRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FundsCollect not implemented")
+}
+func (UnimplementedFundsServiceServer) Transfer(context.Context, *TransferRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Transfer not implemented")
 }
 func (UnimplementedFundsServiceServer) mustEmbedUnimplementedFundsServiceServer() {}
 
@@ -185,6 +199,24 @@ func _FundsService_FundsCollect_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FundsService_Transfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FundsServiceServer).Transfer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/FundsService/Transfer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FundsServiceServer).Transfer(ctx, req.(*TransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FundsService_ServiceDesc is the grpc.ServiceDesc for FundsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -207,6 +239,10 @@ var FundsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FundsCollect",
 			Handler:    _FundsService_FundsCollect_Handler,
+		},
+		{
+			MethodName: "Transfer",
+			Handler:    _FundsService_Transfer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
