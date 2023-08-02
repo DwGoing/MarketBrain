@@ -36,9 +36,6 @@ type App struct {
 	logger *log.Logger
 }
 
-// @title	Funds System
-// @version	1.0
-// @query.collection.format	multi
 /*
 @title	构造函数
 @param 	app *App 	App实例
