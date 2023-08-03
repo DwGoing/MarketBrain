@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/DwGoing/funds-system/pkg/shared"
+	"github.com/DwGoing/funds-system/internal/shared"
 )
 
 // +ioc:autowire=true

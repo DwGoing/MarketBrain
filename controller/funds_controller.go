@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/DwGoing/funds-system/internal/funds_service"
-	"github.com/DwGoing/funds-system/pkg/shared"
+	"github.com/DwGoing/funds-system/internal/shared"
 
 	"github.com/ahmetb/go-linq"
 	"github.com/ethereum/go-ethereum/common"

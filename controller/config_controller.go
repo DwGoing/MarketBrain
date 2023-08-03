@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/DwGoing/funds-system/internal/config_service"
-	"github.com/DwGoing/funds-system/pkg/shared"
+	"github.com/DwGoing/funds-system/internal/shared"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/types/known/emptypb"
