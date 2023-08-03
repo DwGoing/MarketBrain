@@ -26,7 +26,7 @@ type ChainService struct {
 @return _ 			error 			异常信息
 */
 func NewChainService(service *ChainService) (*ChainService, error) {
-	service.logger = log.New(os.Stderr, "[ChainService]", log.LstdFlags)
+	service.logger = log.New(os.Stdout, "[ChainService]", log.LstdFlags)
 	return service, nil
 }
 

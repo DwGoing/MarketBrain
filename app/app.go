@@ -43,7 +43,7 @@ type App struct {
 @return _ 	error 	异常信息
 */
 func NewApp(app *App) (*App, error) {
-	app.logger = log.New(os.Stderr, "[App]", log.LstdFlags)
+	app.logger = log.New(os.Stdout, "[App]", log.LstdFlags)
 	return app, nil
 }
 

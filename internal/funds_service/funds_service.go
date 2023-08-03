@@ -44,7 +44,7 @@ type FundsService struct {
 @return _ 			error 			异常信息
 */
 func NewFundsService(service *FundsService) (*FundsService, error) {
-	service.logger = log.New(os.Stderr, "[FundsService]", log.LstdFlags)
+	service.logger = log.New(os.Stdout, "[FundsService]", log.LstdFlags)
 	service.BusModule.RechargePaid = make(chan shared.RechargeRecord, 1024)
 	// 开启充值监听
 	go service.listenRecharge()
