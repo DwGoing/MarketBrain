@@ -4,9 +4,8 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/DwGoing/funds-system/internal/shared"
-	"github.com/DwGoing/funds-system/internal/storage_module"
-
+	"github.com/DwGoing/OnlyPay/internal/module/storage_module"
+	"github.com/DwGoing/OnlyPay/internal/shared"
 	"github.com/ahmetb/go-linq"
 	"github.com/mitchellh/mapstructure"
 )
@@ -20,8 +19,8 @@ type ConfigModule struct {
 
 /*
 @title	构造函数
-@param 	module 	*ConfigModule 	模块实例
-@return _ 		*ConfigModule	模块实例
+@param 	module 	*ConfigModule 	服务实例
+@return _ 		*ConfigModule 	服务实例
 @return _ 		error 			异常信息
 */
 func NewConfigModule(module *ConfigModule) (*ConfigModule, error) {

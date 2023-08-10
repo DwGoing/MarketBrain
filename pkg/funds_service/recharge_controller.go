@@ -1,4 +1,4 @@
-package controller
+package funds_service
 
 import (
 	"context"
@@ -8,70 +8,29 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DwGoing/funds-system/internal/funds_service"
-	"github.com/DwGoing/funds-system/internal/shared"
-
+	"github.com/DwGoing/OnlyPay/internal/shared"
 	"github.com/ahmetb/go-linq"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 )
 
-// +ioc:autowire=true
-// +ioc:autowire:type=singleton
-// +ioc:autowire:constructFunc=NewFundsController
-type FundsController struct {
-	FundsService *funds_service.FundsService `singleton:""`
-}
-
-/*
-@title	构造函数
-@param 	controller 	*FundsController 	控制器实例
-@return _ 			*FundsController 	控制器实例
-@return _ 			error 				异常信息
-*/
-func NewFundsController(controller *FundsController) (*FundsController, error) {
-	return controller, nil
-}
-
-type GetRechargeWalletRequest struct {
-	shared.Request
-	ExternalIdentity string `json:"externalIdentity,omitempty"`
-	ExternalData     []byte `json:"externalData,omitempty"`
-	CallbackUrl      string `json:"callbackUrl,omitempty"`
-	Token            string `json:"token,omitempty"`
-	Amount           string `json:"amount,omitempty"`
-}
-
-type GetRechargeWalletResponse struct {
-	shared.Response
-	Id       string `json:"id,omitempty"`
-	Address  string `json:"address,omitempty"`
-	ExpireAt int64  `json:"expireAt,omitempty"`
-}
-
 // @Summary	获取充值钱包
 // @Accept	json
 // @Produce	json
-// @Param	request	body	GetRechargeWalletRequest	true	" "
+// @Param	request body	GetRechargeWalletRequest	true	" "
 // @Success	200  	{object}	GetRechargeWalletResponse
 // @Router	/v1/funds/getRechargeWallet	[POST]
-func (Self *FundsController) GetRechargeWallet(ctx *gin.Context) {
+func GetRechargeWallet(ctx *gin.Context) {
 	var request GetRechargeWalletRequest
 	err := ctx.ShouldBind(&request)
 	if err != nil {
-		ctx.JSON(http.StatusOK, shared.Response{
-			Code:    500,
-			Message: err.Error(),
+		ctx.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": err.Error(),
 		})
 		return
 	}
-	response, err := Self.FundsService.GetRechargeWallet(context.Background(), &funds_service.GetRechargeWalletRequest{
-		ExternalIdentity: request.ExternalIdentity,
-		ExternalData:     request.ExternalData,
-		CallbackUrl:      request.CallbackUrl,
-		Token:            request.Token,
-		Amount:           request.Amount,
-	})
+	fundsService, err := GetFundsServiceSingleton()
 	if err != nil {
 		ctx.JSON(http.StatusOK, shared.Response{
 			Code:    500,
@@ -79,17 +38,23 @@ func (Self *FundsController) GetRechargeWallet(ctx *gin.Context) {
 		})
 		return
 	}
-	ctx.JSON(http.StatusOK, GetRechargeWalletResponse{
-		Response: shared.Response{
-			Code: 200,
-		},
-		Id:       response.Id,
-		Address:  response.Address,
-		ExpireAt: response.ExpireAt,
+	response, err := fundsService.GetRechargeWallet(context.Background(), &request)
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": err.Error(),
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"code":     200,
+		"id":       response.Id,
+		"address":  response.Address,
+		"expireAt": response.ExpireAt,
 	})
 }
 
-type GetRechargeRecordsResponseResultItem struct {
+type GetRechargeRecordsResultItem struct {
 	Id               string `json:"id,omitempty"`
 	CreatedAt        string `json:"createdAt,omitempty"`
 	UpdatedAt        string `json:"updatedAt,omitempty"`
@@ -103,12 +68,6 @@ type GetRechargeRecordsResponseResultItem struct {
 	ExpireAt         string `json:"expireAt,omitempty"`
 }
 
-type GetRechargeRecordsResponse struct {
-	shared.Response
-	Result []*GetRechargeRecordsResponseResultItem `json:"result,omitempty"`
-	Total  int64                                   `json:"total,omitempty"`
-}
-
 // @Summary	获取充值记录
 // @Produce	json
 // @Param	id					query	string	false	"充值记录Id"
@@ -120,7 +79,7 @@ type GetRechargeRecordsResponse struct {
 // @Param	pageIndex			query	int		false	"页码"
 // @Success	200	{object}	GetRechargeWalletResponse
 // @Router	/v1/funds/getRechargeRecords 	[GET]
-func (Self *FundsController) GetRechargeRecords(ctx *gin.Context) {
+func GetRechargeRecords(ctx *gin.Context) {
 	// 构造查询条件
 	buildConditions := func() (string, error) {
 		var conditions []string
@@ -197,17 +156,13 @@ func (Self *FundsController) GetRechargeRecords(ctx *gin.Context) {
 	}
 	conditions, err := buildConditions()
 	if err != nil {
-		ctx.JSON(http.StatusOK, shared.Response{
-			Code:    500,
-			Message: err.Error(),
+		ctx.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": err.Error(),
 		})
 		return
 	}
-	response, err := Self.FundsService.GetRechargeRecords(context.Background(), &funds_service.GetRechargeRecordsRequest{
-		Conditions: conditions,
-		PageSize:   pageSize,
-		PageIndex:  pageIndex,
-	})
+	fundsService, err := GetFundsServiceSingleton()
 	if err != nil {
 		ctx.JSON(http.StatusOK, shared.Response{
 			Code:    500,
@@ -215,9 +170,21 @@ func (Self *FundsController) GetRechargeRecords(ctx *gin.Context) {
 		})
 		return
 	}
-	var result []*GetRechargeRecordsResponseResultItem
-	linq.From(response.Result).SelectT(func(item *funds_service.RechargeRecord) *GetRechargeRecordsResponseResultItem {
-		return &GetRechargeRecordsResponseResultItem{
+	response, err := fundsService.GetRechargeRecords(context.Background(), &GetRechargeRecordsRequest{
+		Conditions: conditions,
+		PageSize:   pageSize,
+		PageIndex:  pageIndex,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": err.Error(),
+		})
+		return
+	}
+	var result []GetRechargeRecordsResultItem
+	linq.From(response.Result).SelectT(func(item *RechargeRecord) GetRechargeRecordsResultItem {
+		return GetRechargeRecordsResultItem{
 			Id:               item.Id,
 			CreatedAt:        item.CreatedAt,
 			UpdatedAt:        item.UpdatedAt,
@@ -231,11 +198,9 @@ func (Self *FundsController) GetRechargeRecords(ctx *gin.Context) {
 			ExpireAt:         item.ExpireAt,
 		}
 	}).ToSlice(&result)
-	ctx.JSON(http.StatusOK, GetRechargeRecordsResponse{
-		Response: shared.Response{
-			Code: 200,
-		},
-		Result: result,
-		Total:  response.Total,
+	ctx.JSON(http.StatusOK, gin.H{
+		"code":   200,
+		"result": result,
+		"total":  response.Total,
 	})
 }

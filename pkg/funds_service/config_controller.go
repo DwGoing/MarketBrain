@@ -1,32 +1,14 @@
-package controller
+package funds_service
 
 import (
 	"context"
 	"net/http"
 
-	"github.com/DwGoing/funds-system/internal/config_service"
-	"github.com/DwGoing/funds-system/internal/shared"
+	"github.com/DwGoing/OnlyPay/internal/shared"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-// +ioc:autowire=true
-// +ioc:autowire:type=singleton
-// +ioc:autowire:constructFunc=NewConfigController
-type ConfigController struct {
-	ConfigService *config_service.ConfigService `singleton:""`
-}
-
-/*
-@title	构造函数
-@param 	controller 	*ConfigController 	控制器实例
-@return _ 			*ConfigController 	控制器实例
-@return _ 			error 				异常信息
-*/
-func NewConfigController(controller *ConfigController) (*ConfigController, error) {
-	return controller, nil
-}
 
 type LoadResponse struct {
 	shared.Response
@@ -41,8 +23,16 @@ type LoadResponse struct {
 // @Produce	json
 // @Success	200	{object}	LoadResponse
 // @Router	/v1/config/load 	[GET]
-func (Self *ConfigController) Load(ctx *gin.Context) {
-	response, err := Self.ConfigService.Load(context.Background(), &emptypb.Empty{})
+func LoadConfig(ctx *gin.Context) {
+	fundsService, err := GetFundsServiceSingleton()
+	if err != nil {
+		ctx.JSON(http.StatusOK, shared.Response{
+			Code:    500,
+			Message: err.Error(),
+		})
+		return
+	}
+	response, err := fundsService.LoadConfig(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		ctx.JSON(http.StatusOK, shared.Response{
 			Code:    500,
@@ -77,8 +67,8 @@ type SetRequest struct {
 // @Param	request	body	SetRequest	true	" "
 // @Success	200
 // @Router	/v1/config/set	[POST]
-func (Self *ConfigController) Set(ctx *gin.Context) {
-	var request SetRequest
+func SetConfig(ctx *gin.Context) {
+	var request SetConfigRequest
 	err := ctx.ShouldBind(&request)
 	if err != nil {
 		ctx.JSON(http.StatusOK, shared.Response{
@@ -87,7 +77,15 @@ func (Self *ConfigController) Set(ctx *gin.Context) {
 		})
 		return
 	}
-	_, err = Self.ConfigService.Set(context.Background(), &config_service.SetRequest{
+	fundsService, err := GetFundsServiceSingleton()
+	if err != nil {
+		ctx.JSON(http.StatusOK, shared.Response{
+			Code:    500,
+			Message: err.Error(),
+		})
+		return
+	}
+	_, err = fundsService.SetConfig(context.Background(), &SetConfigRequest{
 		Mnemonic:          request.Mnemonic,
 		WalletMaxNumber:   request.WalletMaxNumber,
 		ExpireTime:        request.ExpireTime,

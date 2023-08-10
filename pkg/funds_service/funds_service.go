@@ -1,25 +1,33 @@
 package funds_service
 
 import (
+	"bytes"
 	context "context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
+	"net"
+	"net/http"
 	"os"
 	sync "sync"
 	"time"
 
-	"github.com/DwGoing/funds-system/internal/bus_module"
-	"github.com/DwGoing/funds-system/internal/chain_module"
-	"github.com/DwGoing/funds-system/internal/config_module"
-	"github.com/DwGoing/funds-system/internal/shared"
-	"github.com/DwGoing/funds-system/internal/storage_module"
-	"github.com/DwGoing/funds-system/pkg/hd_wallet"
-
-	linq "github.com/ahmetb/go-linq/v3"
+	"github.com/DwGoing/OnlyPay/docs"
+	"github.com/DwGoing/OnlyPay/internal/module/chain_module"
+	"github.com/DwGoing/OnlyPay/internal/module/config_module"
+	"github.com/DwGoing/OnlyPay/internal/module/storage_module"
+	"github.com/DwGoing/OnlyPay/internal/shared"
+	"github.com/DwGoing/OnlyPay/pkg/hd_wallet"
+	"github.com/ahmetb/go-linq"
+	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	grpc "google.golang.org/grpc"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -27,28 +35,144 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewFundsService
 type FundsService struct {
-	UnimplementedFundsServiceServer
-
+	GinPort       *config.ConfigInt64           `config:",app.gin.port"`
+	GrpcPort      *config.ConfigInt64           `config:",app.grpc.port"`
+	Nodes         *config.ConfigSlice           `config:",chain.nodes"`
 	ConfigModule  *config_module.ConfigModule   `singleton:""`
 	StorageModule *storage_module.StorageModule `singleton:""`
-	BusModule     *bus_module.BusModule         `singleton:""`
 	ChainModule   *chain_module.ChainModule     `singleton:""`
 
-	logger *log.Logger
+	UnimplementedFundsServiceServer
+	logger       *log.Logger
+	RechargePaid chan shared.RechargeRecord
 }
 
 /*
 @title	构造函数
-@param 	service 	*FundsService 	服务实例
-@return _ 			*FundsService 	服务实例
-@return _ 			error 			异常信息
+@param 	service *FundsService 	服务实例
+@return _ 		*FundsService 	服务实例
+@return _ 		error 			异常信息
 */
 func NewFundsService(service *FundsService) (*FundsService, error) {
+	err := service.ChainModule.Initialize(service.Nodes.Value())
+	if err != nil {
+		return nil, err
+	}
 	service.logger = log.New(os.Stdout, "[FundsService]", log.LstdFlags)
-	service.BusModule.RechargePaid = make(chan shared.RechargeRecord, 1024)
+	service.RechargePaid = make(chan shared.RechargeRecord, 1024)
+	// 开启事件监听
+	go service.listenEvent()
 	// 开启充值监听
 	go service.listenRecharge()
 	return service, nil
+}
+
+/*
+@title	初始化
+@param 	Self	*FundsService 	服务实例
+@return _ 		*FundsService 	服务实例
+@return _ 		error 			异常信息
+*/
+func (Self *FundsService) Initialize() error {
+	// gin
+	go func() {
+		docs.SwaggerInfo.BasePath = "/"
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", Self.GinPort.Value()))
+		if err != nil {
+			Self.logger.Fatalf("Gin初始化失败:%s", err)
+		}
+		engine := gin.Default()
+		engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		engine.POST("/callback", func(ctx *gin.Context) {
+			body, _ := io.ReadAll(ctx.Request.Body)
+			log.Printf("%s", body)
+			defer ctx.Request.Body.Close()
+		})
+		v1Router := engine.Group("/v1")
+		{
+			configRouter := v1Router.Group("config")
+			{
+				configRouter.GET("/load", LoadConfig)
+				configRouter.POST("/set", SetConfig)
+			}
+			fundsRouter := v1Router.Group("/funds")
+			{
+				fundsRouter.POST("/getRechargeWallet", GetRechargeWallet)
+				fundsRouter.GET("/getRechargeRecords", GetRechargeRecords)
+			}
+		}
+		Self.logger.Printf("Gin正在监听: %s", listener.Addr())
+		if err := engine.RunListener(listener); err != nil {
+			Self.logger.Fatalf("Gin启动失败: %s", err)
+		}
+	}()
+
+	// gRPC
+	go func() {
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", Self.GrpcPort.Value()))
+		if err != nil {
+			Self.logger.Fatalf("gRPC初始化失败:%s", err)
+		}
+		server := grpc.NewServer()
+		RegisterFundsServiceServer(server, Self)
+		Self.logger.Printf("gRPC正在监听: %s", listener.Addr())
+		if err = server.Serve(listener); err != nil {
+			Self.logger.Fatalf("gRPC启动失败: %s", err)
+		}
+	}()
+	return nil
+}
+
+/*
+@title	监听事件
+@param 	Self 	*FundsService 	服务实例
+*/
+func (Self *FundsService) listenEvent() {
+	for {
+		select {
+		// 充值完成
+		case record := <-Self.RechargePaid:
+			Self.rechargePaidHandle(record)
+		default:
+			time.Sleep(time.Millisecond * 500)
+		}
+	}
+}
+
+/*
+@title	充值完成事件
+@param 	Self 	*FundsService 			服务实例
+@param 	record 	shared.RechargeRecord 	充值记录
+*/
+func (Self *FundsService) rechargePaidHandle(record shared.RechargeRecord) {
+	log.Printf("%s 充值完成", record.Id)
+	go func() {
+		retry := 0
+		for {
+			// 重试5次
+			if retry++; retry > 5 {
+				log.Printf("rechargePaidHandle Error: maximum retry limit")
+				return
+			}
+			time.Sleep(time.Minute * 2 * time.Duration(retry-1)) // 0/2/4/6/8 min
+			request, err := http.NewRequest("POST", record.CallbackUrl, bytes.NewBuffer(record.ExternalData))
+			if err != nil {
+				log.Printf("rechargePaidHandle Error: %s", err)
+				continue
+			}
+			httpResponse, err := http.DefaultClient.Do(request)
+			if err != nil {
+				log.Printf("rechargePaidHandle Error: %s", err)
+				continue
+			}
+			defer httpResponse.Body.Close()
+			if httpResponse.StatusCode != http.StatusOK {
+				log.Printf("rechargePaidHandle Error: status code not 200")
+				continue
+			}
+			return
+		}
+	}()
 }
 
 /*
@@ -131,8 +255,8 @@ func (Self *FundsService) listenRecharge() {
 					Self.logger.Printf("listenRecharge Error: %s", result.Error)
 					return
 				}
-				// 通知消息总线
-				Self.BusModule.RechargePaid <- record
+				// 通知事件总线
+				Self.RechargePaid <- record
 				// 归集检查
 				configs, err := Self.ConfigModule.Load()
 				if err != nil {
@@ -318,6 +442,70 @@ func (Self *FundsService) collect(from *hd_wallet.Wallet, to common.Address, tok
 		return err
 	}
 	return nil
+}
+
+/*
+@title	加载配置
+@param 	Self	*FundsService 	服务实例
+@param 	ctx		context.Context 请求上下文
+@param 	request	*LoadRequest 	请求体
+@return _ 		*emptypb.Empty 	响应体
+@return _ 		error 			异常信息
+*/
+func (Self *FundsService) LoadConfig(ctx context.Context, request *emptypb.Empty) (*LoadConfigResponse, error) {
+	configs, err := Self.ConfigModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	return &LoadConfigResponse{
+		Mnemonic:          configs.Mnemonic,
+		WalletMaxNumber:   configs.WalletMaxNumber,
+		ExpireTime:        configs.ExpireTime,
+		ExpireDelay:       configs.ExpireDelay,
+		CollectThresholds: configs.CollectThresholds,
+	}, nil
+}
+
+/*
+@title	修改配置
+@param 	Self	*FundsService 	服务实例
+@param 	ctx		context.Context 请求上下文
+@param 	request	*SetRequest 	请求体
+@return _ 		*emptypb.Empty 	响应体
+@return _ 		error 			异常信息
+*/
+func (Self *FundsService) SetConfig(ctx context.Context, request *SetConfigRequest) (*emptypb.Empty, error) {
+	if request.Mnemonic != nil {
+		err := Self.ConfigModule.Set("Mnemonic", *request.Mnemonic)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.WalletMaxNumber != nil {
+		err := Self.ConfigModule.Set("WalletMaxNumber", *request.WalletMaxNumber)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.ExpireTime != nil {
+		err := Self.ConfigModule.Set("ExpireTime", *request.ExpireTime)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.ExpireDelay != nil {
+		err := Self.ConfigModule.Set("ExpireDelay", *request.ExpireDelay)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.CollectThresholds != nil {
+		err := Self.ConfigModule.Set("CollectThresholds", request.CollectThresholds)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &emptypb.Empty{}, nil
 }
 
 /*

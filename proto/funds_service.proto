@@ -5,11 +5,29 @@ option go_package = "./;funds_service";
 import "google/protobuf/empty.proto";
 
 service FundsService {
+    rpc LoadConfig (google.protobuf.Empty) returns (LoadConfigResponse) {}
+    rpc SetConfig (SetConfigRequest) returns (google.protobuf.Empty) {}
     rpc GetCollectionWallet (google.protobuf.Empty) returns (GetCollectionWalletResponse) {}
     rpc GetRechargeWallet (GetRechargeWalletRequest) returns (GetRechargeWalletResponse) {}
     rpc GetRechargeRecords (GetRechargeRecordsRequest) returns (GetRechargeRecordsResponse) {}
     rpc FundsCollect (FundsCollectRequest) returns (google.protobuf.Empty) {}
     rpc Transfer (TransferRequest) returns (google.protobuf.Empty) {}
+}
+
+message LoadConfigResponse {
+    string mnemonic = 1;
+	int64 walletMaxNumber = 2;
+	int64 expireTime = 3;
+	int64 expireDelay = 4;
+	map<string, float> collectThresholds = 5;
+}
+
+message SetConfigRequest {
+    optional string mnemonic = 1;
+    optional int64 walletMaxNumber = 2;
+	optional int64 expireTime = 3;
+	optional int64 expireDelay = 4;
+	map<string, float> collectThresholds = 5;
 }
 
 message GetCollectionWalletResponse {

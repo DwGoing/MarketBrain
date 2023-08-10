@@ -1,4 +1,4 @@
-module github.com/DwGoing/funds-system
+module github.com/DwGoing/OnlyPay
 
 go 1.20
 
@@ -37,7 +37,6 @@ require (
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/Workiva/go-datastructures v1.0.52 // indirect
 	github.com/ahmetb/go-linq v3.0.0+incompatible
-	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/apache/dubbo-getty v1.4.8 // indirect
 	github.com/apache/thrift v0.16.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
