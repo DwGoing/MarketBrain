@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/DwGoing/funds-system/app"
+	"github.com/DwGoing/OnlyPay/pkg/funds_service"
 
 	"github.com/alibaba/ioc-golang"
 	"github.com/alibaba/ioc-golang/config"
@@ -22,11 +22,14 @@ func main() {
 	if err := ioc.Load(config.WithSearchPath(path)); err != nil {
 		panic(err)
 	}
-	app, err := app.GetAppSingleton()
+	app, err := funds_service.GetFundsServiceSingleton()
 	if err != nil {
 		panic(err)
 	}
-	app.Initialize()
+	err = app.Initialize()
+	if err != nil {
+		panic(err)
+	}
 
 	log.Println("进程已启动")
 	//监听指定信号 ctrl+c kill

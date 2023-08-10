@@ -7,7 +7,7 @@ package chain_module
 
 import (
 	"crypto/ecdsa"
-	"github.com/DwGoing/funds-system/pkg/hd_wallet"
+	"github.com/DwGoing/OnlyPay/pkg/hd_wallet"
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	singleton "github.com/alibaba/ioc-golang/autowire/singleton"
@@ -40,6 +40,7 @@ func init() {
 
 type ChainModuleConstructFunc func(impl *ChainModule) (*ChainModule, error)
 type chainModule_ struct {
+	Initialize_     func(nodes []interface{}) error
 	GetDecimals_    func(token string) (uint8, error)
 	GetHDWallet_    func(mnemonic string, password string) (*hd_wallet.HDWallet, error)
 	ConvertValue_   func(token string, value *big.Float) (*big.Int, error)
@@ -47,6 +48,10 @@ type chainModule_ struct {
 	GetBalance_     func(address string, token string) (*big.Int, error)
 	GetGasPrice_    func() (*big.Int, error)
 	Transfer_       func(privateKey *ecdsa.PrivateKey, to string, token string, amount *big.Int) error
+}
+
+func (c *chainModule_) Initialize(nodes []interface{}) error {
+	return c.Initialize_(nodes)
 }
 
 func (c *chainModule_) GetDecimals(token string) (uint8, error) {
@@ -78,6 +83,7 @@ func (c *chainModule_) Transfer(privateKey *ecdsa.PrivateKey, to string, token s
 }
 
 type ChainModuleIOCInterface interface {
+	Initialize(nodes []interface{}) error
 	GetDecimals(token string) (uint8, error)
 	GetHDWallet(mnemonic string, password string) (*hd_wallet.HDWallet, error)
 	ConvertValue(token string, value *big.Float) (*big.Int, error)

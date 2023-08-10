@@ -1,14 +1,5 @@
 definitions:
-  controller.GetBalanceResponse:
-    properties:
-      balance:
-        type: string
-      code:
-        type: integer
-      message:
-        type: string
-    type: object
-  controller.GetRechargeWalletRequest:
+  funds_service.GetRechargeWalletRequest:
     properties:
       amount:
         type: string
@@ -23,20 +14,16 @@ definitions:
       token:
         type: string
     type: object
-  controller.GetRechargeWalletResponse:
+  funds_service.GetRechargeWalletResponse:
     properties:
       address:
         type: string
-      code:
-        type: integer
       expireAt:
         type: integer
       id:
         type: string
-      message:
-        type: string
     type: object
-  controller.LoadResponse:
+  funds_service.LoadResponse:
     properties:
       code:
         type: integer
@@ -55,7 +42,7 @@ definitions:
       walletMaxNumber:
         type: integer
     type: object
-  controller.SetRequest:
+  funds_service.SetRequest:
     properties:
       collectThresholds:
         additionalProperties:
@@ -73,26 +60,6 @@ definitions:
 info:
   contact: {}
 paths:
-  /v1/chain/getBalance:
-    get:
-      parameters:
-      - description: 查询地址
-        in: query
-        name: address
-        required: true
-        type: string
-      - description: 查询Token
-        in: query
-        name: token
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/controller.GetBalanceResponse'
-      summary: 查询余额
   /v1/config/load:
     get:
       produces:
@@ -101,7 +68,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/controller.LoadResponse'
+            $ref: '#/definitions/funds_service.LoadResponse'
       summary: 加载配置
   /v1/config/set:
     post:
@@ -113,7 +80,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/controller.SetRequest'
+          $ref: '#/definitions/funds_service.SetRequest'
       produces:
       - application/json
       responses:
@@ -157,7 +124,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/controller.GetRechargeWalletResponse'
+            $ref: '#/definitions/funds_service.GetRechargeWalletResponse'
       summary: 获取充值记录
   /v1/funds/getRechargeWallet:
     post:
@@ -169,13 +136,13 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/controller.GetRechargeWalletRequest'
+          $ref: '#/definitions/funds_service.GetRechargeWalletRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/controller.GetRechargeWalletResponse'
+            $ref: '#/definitions/funds_service.GetRechargeWalletResponse'
       summary: 获取充值钱包
 swagger: "2.0"

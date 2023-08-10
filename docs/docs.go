@@ -16,37 +16,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/v1/chain/getBalance": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "查询余额",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "查询地址",
-                        "name": "address",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "查询Token",
-                        "name": "token",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/controller.GetBalanceResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/v1/config/load": {
             "get": {
                 "produces": [
@@ -57,7 +26,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/controller.LoadResponse"
+                            "$ref": "#/definitions/funds_service.LoadResponse"
                         }
                     }
                 }
@@ -79,7 +48,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.SetRequest"
+                            "$ref": "#/definitions/funds_service.SetRequest"
                         }
                     }
                 ],
@@ -144,7 +113,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/controller.GetRechargeWalletResponse"
+                            "$ref": "#/definitions/funds_service.GetRechargeWalletResponse"
                         }
                     }
                 }
@@ -166,7 +135,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.GetRechargeWalletRequest"
+                            "$ref": "#/definitions/funds_service.GetRechargeWalletRequest"
                         }
                     }
                 ],
@@ -174,7 +143,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/controller.GetRechargeWalletResponse"
+                            "$ref": "#/definitions/funds_service.GetRechargeWalletResponse"
                         }
                     }
                 }
@@ -182,21 +151,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "controller.GetBalanceResponse": {
-            "type": "object",
-            "properties": {
-                "balance": {
-                    "type": "string"
-                },
-                "code": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "controller.GetRechargeWalletRequest": {
+        "funds_service.GetRechargeWalletRequest": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -219,27 +174,21 @@ const docTemplate = `{
                 }
             }
         },
-        "controller.GetRechargeWalletResponse": {
+        "funds_service.GetRechargeWalletResponse": {
             "type": "object",
             "properties": {
                 "address": {
                     "type": "string"
-                },
-                "code": {
-                    "type": "integer"
                 },
                 "expireAt": {
                     "type": "integer"
                 },
                 "id": {
                     "type": "string"
-                },
-                "message": {
-                    "type": "string"
                 }
             }
         },
-        "controller.LoadResponse": {
+        "funds_service.LoadResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -268,7 +217,7 @@ const docTemplate = `{
                 }
             }
         },
-        "controller.SetRequest": {
+        "funds_service.SetRequest": {
             "type": "object",
             "properties": {
                 "collectThresholds": {

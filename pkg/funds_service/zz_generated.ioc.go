@@ -39,11 +39,26 @@ func init() {
 
 type FundsServiceConstructFunc func(impl *FundsService) (*FundsService, error)
 type fundsService_ struct {
+	Initialize_          func() error
+	LoadConfig_          func(ctx contextx.Context, request *emptypb.Empty) (*LoadConfigResponse, error)
+	SetConfig_           func(ctx contextx.Context, request *SetConfigRequest) (*emptypb.Empty, error)
 	GetCollectionWallet_ func(ctx contextx.Context, request *emptypb.Empty) (*GetCollectionWalletResponse, error)
 	GetRechargeWallet_   func(ctx contextx.Context, request *GetRechargeWalletRequest) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords_  func(ctx contextx.Context, request *GetRechargeRecordsRequest) (*GetRechargeRecordsResponse, error)
 	FundsCollect_        func(ctx contextx.Context, request *FundsCollectRequest) (*emptypb.Empty, error)
 	Transfer_            func(ctx contextx.Context, request *TransferRequest) (*emptypb.Empty, error)
+}
+
+func (f *fundsService_) Initialize() error {
+	return f.Initialize_()
+}
+
+func (f *fundsService_) LoadConfig(ctx contextx.Context, request *emptypb.Empty) (*LoadConfigResponse, error) {
+	return f.LoadConfig_(ctx, request)
+}
+
+func (f *fundsService_) SetConfig(ctx contextx.Context, request *SetConfigRequest) (*emptypb.Empty, error) {
+	return f.SetConfig_(ctx, request)
 }
 
 func (f *fundsService_) GetCollectionWallet(ctx contextx.Context, request *emptypb.Empty) (*GetCollectionWalletResponse, error) {
@@ -67,6 +82,9 @@ func (f *fundsService_) Transfer(ctx contextx.Context, request *TransferRequest)
 }
 
 type FundsServiceIOCInterface interface {
+	Initialize() error
+	LoadConfig(ctx contextx.Context, request *emptypb.Empty) (*LoadConfigResponse, error)
+	SetConfig(ctx contextx.Context, request *SetConfigRequest) (*emptypb.Empty, error)
 	GetCollectionWallet(ctx contextx.Context, request *emptypb.Empty) (*GetCollectionWalletResponse, error)
 	GetRechargeWallet(ctx contextx.Context, request *GetRechargeWalletRequest) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords(ctx contextx.Context, request *GetRechargeRecordsRequest) (*GetRechargeRecordsResponse, error)

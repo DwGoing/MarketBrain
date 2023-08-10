@@ -23,6 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FundsServiceClient interface {
+	LoadConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoadConfigResponse, error)
+	SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetCollectionWallet(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetCollectionWalletResponse, error)
 	GetRechargeWallet(ctx context.Context, in *GetRechargeWalletRequest, opts ...grpc.CallOption) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords(ctx context.Context, in *GetRechargeRecordsRequest, opts ...grpc.CallOption) (*GetRechargeRecordsResponse, error)
@@ -36,6 +38,24 @@ type fundsServiceClient struct {
 
 func NewFundsServiceClient(cc grpc.ClientConnInterface) FundsServiceClient {
 	return &fundsServiceClient{cc}
+}
+
+func (c *fundsServiceClient) LoadConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoadConfigResponse, error) {
+	out := new(LoadConfigResponse)
+	err := c.cc.Invoke(ctx, "/FundsService/LoadConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fundsServiceClient) SetConfig(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/FundsService/SetConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *fundsServiceClient) GetCollectionWallet(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetCollectionWalletResponse, error) {
@@ -87,6 +107,8 @@ func (c *fundsServiceClient) Transfer(ctx context.Context, in *TransferRequest, 
 // All implementations must embed UnimplementedFundsServiceServer
 // for forward compatibility
 type FundsServiceServer interface {
+	LoadConfig(context.Context, *emptypb.Empty) (*LoadConfigResponse, error)
+	SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error)
 	GetCollectionWallet(context.Context, *emptypb.Empty) (*GetCollectionWalletResponse, error)
 	GetRechargeWallet(context.Context, *GetRechargeWalletRequest) (*GetRechargeWalletResponse, error)
 	GetRechargeRecords(context.Context, *GetRechargeRecordsRequest) (*GetRechargeRecordsResponse, error)
@@ -99,6 +121,12 @@ type FundsServiceServer interface {
 type UnimplementedFundsServiceServer struct {
 }
 
+func (UnimplementedFundsServiceServer) LoadConfig(context.Context, *emptypb.Empty) (*LoadConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoadConfig not implemented")
+}
+func (UnimplementedFundsServiceServer) SetConfig(context.Context, *SetConfigRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetConfig not implemented")
+}
 func (UnimplementedFundsServiceServer) GetCollectionWallet(context.Context, *emptypb.Empty) (*GetCollectionWalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCollectionWallet not implemented")
 }
@@ -125,6 +153,42 @@ type UnsafeFundsServiceServer interface {
 
 func RegisterFundsServiceServer(s grpc.ServiceRegistrar, srv FundsServiceServer) {
 	s.RegisterService(&FundsService_ServiceDesc, srv)
+}
+
+func _FundsService_LoadConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FundsServiceServer).LoadConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/FundsService/LoadConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FundsServiceServer).LoadConfig(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FundsService_SetConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FundsServiceServer).SetConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/FundsService/SetConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FundsServiceServer).SetConfig(ctx, req.(*SetConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _FundsService_GetCollectionWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -224,6 +288,14 @@ var FundsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "FundsService",
 	HandlerType: (*FundsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "LoadConfig",
+			Handler:    _FundsService_LoadConfig_Handler,
+		},
+		{
+			MethodName: "SetConfig",
+			Handler:    _FundsService_SetConfig_Handler,
+		},
 		{
 			MethodName: "GetCollectionWallet",
 			Handler:    _FundsService_GetCollectionWallet_Handler,

@@ -9,9 +9,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/DwGoing/funds-system/pkg/hd_wallet"
+	"github.com/DwGoing/OnlyPay/pkg/hd_wallet"
 
-	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -23,8 +22,7 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewChainModule
 type ChainModule struct {
-	Nodes *config.ConfigSlice `config:",chain.nodes"`
-
+	nodes    []interface{}
 	decimals map[common.Address]uint8
 }
 
@@ -40,14 +38,24 @@ func NewChainModule(module *ChainModule) (*ChainModule, error) {
 }
 
 /*
+@title	初始化
+@param 	Self 	*ChainModule 	模块实例
+@param 	nodes 	[]interface{}	节点URL
+@return _ 		error 			异常信息
+*/
+func (Self *ChainModule) Initialize(nodes []interface{}) error {
+	Self.nodes = nodes
+	return nil
+}
+
+/*
 @title	获取Eth客户端
 @param 	Self 	*ChainModule 		模块实例
 @return _ 		*ethclient.Client 	Eth客户端实例
 @return _ 		error 				异常信息
 */
 func (Self *ChainModule) getClient() (*ethclient.Client, error) {
-	nodes := Self.Nodes.Value()
-	node := nodes[rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(nodes))]
+	node := Self.nodes[rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(Self.nodes))]
 	client, err := ethclient.Dial(node.(string))
 	if err != nil {
 		return nil, err
