@@ -1,0 +1,25 @@
+mode: set
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/account.go:19.42,22.2 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:30.47,31.20 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:31.20,33.3 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:34.2,35.16 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:35.16,37.3 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:38.2,40.8 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:50.72,51.20 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:51.20,53.3 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:54.2,54.38 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:54.38,56.3 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:57.2,58.16 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:58.16,60.3 1 0
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:61.2,61.23 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:71.80,73.16 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:73.16,75.3 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:76.2,77.31 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:77.31,79.17 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:79.17,81.4 1 0
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:83.2,84.16 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:84.16,86.3 1 0
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:87.2,87.39 1 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:97.85,99.16 2 1
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:99.16,101.3 1 0
+github.com/DwGoing/OnlyPay/pkg/hd_wallet/hd_wallet.go:102.2,105.8 1 1
