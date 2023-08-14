@@ -10,9 +10,6 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-/*
-@title HD钱包
-*/
 type HDWallet struct {
 	masterKey *hdkeychain.ExtendedKey
 }
@@ -87,12 +84,12 @@ func (Self *HDWallet) derivePrivateKey(path accounts.DerivationPath) (*ecdsa.Pri
 @return _		*Wallet		Wallet实例
 @return _ 		error 		异常信息
 */
-func (Self *HDWallet) GetWallet(index uint32) (*Wallet, error) {
+func (Self *HDWallet) GetAccount(index uint32) (*Account, error) {
 	privateKey, err := Self.derivePrivateKey(append(accounts.DefaultRootDerivationPath, index))
 	if err != nil {
 		return nil, err
 	}
-	return &Wallet{
+	return &Account{
 		Index:      index,
 		PrivateKey: privateKey,
 	}, nil

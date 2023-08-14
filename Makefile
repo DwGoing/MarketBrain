@@ -5,9 +5,9 @@ OUTPUT := ${ROOT_DIR}/bin
 no_target:
 	@echo "no target unspecialed"
 
-build_funds_service: CMD := ${CMD}/funds_service
-build_funds_service: OUTPUT := ${OUTPUT}/funds_service
-build_funds_service: build_service
+build_funds_system: CMD := ${CMD}/funds_system
+build_funds_system: OUTPUT := ${OUTPUT}/funds_system
+build_funds_system: build_service
 
 build_service: 
 	@echo "Target: build service"

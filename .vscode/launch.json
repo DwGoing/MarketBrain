@@ -5,11 +5,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Funds Service",
+      "name": "Debug Funds System",
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/funds_service/main.go"
+      "program": "${workspaceFolder}/cmd/funds_system/main.go"
     }
   ]
 }

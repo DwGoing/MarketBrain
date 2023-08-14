@@ -6,10 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-/*
-@title 钱包
-*/
-type Wallet struct {
+type Account struct {
 	Index      uint32
 	PrivateKey *ecdsa.PrivateKey
 }
@@ -19,7 +16,7 @@ type Wallet struct {
 @param 	Self   	*Wallet 	Wallet实例
 @return _ 		string 		钱包地址
 */
-func (Self *Wallet) GetAddress() string {
+func (Self *Account) GetAddress() string {
 	address := crypto.PubkeyToAddress(Self.PrivateKey.PublicKey)
 	return address.Hex()
 }

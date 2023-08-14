@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-option go_package = "./;funds_service";
+option go_package = "./;user_sysetm";
 
 import "google/protobuf/empty.proto";
 
-service FundsService {
+service UserSystem {
     rpc LoadConfig (google.protobuf.Empty) returns (LoadConfigResponse) {}
     rpc SetConfig (SetConfigRequest) returns (google.protobuf.Empty) {}
     rpc GetCollectionWallet (google.protobuf.Empty) returns (GetCollectionWalletResponse) {}
