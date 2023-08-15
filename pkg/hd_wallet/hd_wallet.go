@@ -1,7 +1,6 @@
 package hd_wallet
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 
@@ -63,12 +62,12 @@ func FromMnemonic(mnemonic string, password string) (*HDWallet, error) {
 
 /*
 @title 	派生子私钥
-@param 	Self   	*HDWallet 			HDWallet实例
-@param 	path 	string				派生路径
-@return _		*ecdsa.PrivateKey 	子私钥
-@return _ 		error 				异常信息
+@param 	Self   	*HDWallet 				HDWallet实例
+@param 	path 	string					派生路径
+@return _		*hdkeychain.ExtendedKey 子私钥
+@return _ 		error 					异常信息
 */
-func (Self *HDWallet) DerivePrivateKey(path string) (*ecdsa.PrivateKey, error) {
+func (Self *HDWallet) DerivePrivateKey(path string) (*hdkeychain.ExtendedKey, error) {
 	parsedPath, err := accounts.ParseDerivationPath(path)
 	if err != nil {
 		return nil, err
@@ -80,11 +79,7 @@ func (Self *HDWallet) DerivePrivateKey(path string) (*ecdsa.PrivateKey, error) {
 			return nil, err
 		}
 	}
-	btcecPrivateKey, err := privateKey.ECPrivKey()
-	if err != nil {
-		return nil, err
-	}
-	return btcecPrivateKey.ToECDSA(), nil
+	return privateKey, nil
 }
 
 /*
@@ -99,8 +94,13 @@ func (Self *HDWallet) GetAccount(currency Currency, index uint32) (*Account, err
 	if err != nil {
 		return nil, err
 	}
+
+	btcecPrivateKey, err := privateKey.ECPrivKey()
+	if err != nil {
+		return nil, err
+	}
 	return &Account{
 		Index:      index,
-		PrivateKey: privateKey,
+		PrivateKey: btcecPrivateKey.ToECDSA(),
 	}, nil
 }

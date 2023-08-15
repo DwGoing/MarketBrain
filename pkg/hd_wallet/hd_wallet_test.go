@@ -2,8 +2,6 @@ package hd_wallet
 
 import (
 	"testing"
-
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func TestFromMnemonic(t *testing.T) {
@@ -60,14 +58,14 @@ func TestDerivePrivateKey(t *testing.T) {
 		want string
 	}{
 		{"", "ambiguous path: use 'm/' prefix for absolute paths, or no leading '/' for relative ones"},
-		{"m/44'/60'", "0x0144e1A168a82DA02E2248340118Deb60FEc4814"},
-		{"m/44'/60'/0'/0/0", "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"},
+		{"m/44'/60'/0'/0", "xprvA258xoK46SQ67fJuzV56VGTbBzrA89Qu1LxZJeGti1KtyVxH71TpxAXw6LAU7o7vyFmAvAU9bzjG1H2nCv9DVg3uqLTB9MukbL5hgLizoq7"},
+		{"m/44'/60'/0'/0/0", "xprvA3apYdt417TRrAdLnuf1pjDXZoXDT8Hdo3YRUTfBTQtLcu5i6yQcxe4FhNP538Yh3iouZqQh6Ar4VsNqiEKhCGx9mpzZdMdtxJhrubQoLHz"},
 	}
 	for _, test := range tests {
 		hdWallet, _ := FromMnemonic(mnemonic, "")
 		privateKey, err := hdWallet.DerivePrivateKey(test.path)
 		if err == nil {
-			if crypto.PubkeyToAddress(privateKey.PublicKey).Hex() != test.want {
+			if privateKey.String() != test.want {
 				t.Error("Address Error")
 			}
 		} else {
