@@ -8,7 +8,10 @@ import (
 // +ioc:autowire:type=singleton
 // +ioc:autowire:constructFunc=NewFundsService
 type FundsService struct {
-	X *config.ConfigInt `config:",xxx"`
+	RpcPort               *config.ConfigInt    `config:",service.rpc"`
+	HttpPort              *config.ConfigInt    `config:",service.http"`
+	RedisConnectionString *config.ConfigString `config:",storage.redis"`
+	MysqlConnectionString *config.ConfigString `config:",storage.mysql"`
 }
 
 func NewFundsService(service *FundsService) (*FundsService, error) {

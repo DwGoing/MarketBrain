@@ -1,4 +1,4 @@
-package shared
+package model
 
 /*
 @title 配置表
