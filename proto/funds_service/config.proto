@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "./;api";
+
+import "google/protobuf/empty.proto";
+
+service Config {
+    rpc Load (google.protobuf.Empty) returns (LoadResponse) {}
+}
+
+message LoadResponse {
+    string collectionAddress = 1;
+    string contractUSD = 2;
+}

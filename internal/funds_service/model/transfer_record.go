@@ -1,4 +1,4 @@
-package shared
+package model
 
 // @title 充值状态
 type TransferStatus int8
