@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "./;api";
+
+import "google/protobuf/empty.proto";
+
+service Treasury {
+    rpc CreateChargeOrder (google.protobuf.Empty) returns (CreateChargeOrderResponse);
+}
+
+message CreateChargeOrderRequest {
+    string externalIdentity = 1;
+    optional bytes externalData = 2;
+    string callbackUrl = 3;
+    string chain = 4;
+    double amount = 5;
+    int64 walletIndex = 6;
+}
+
+message CreateChargeOrderResponse {
+    string orderId = 1;
+    string expireAt = 2;
+}
