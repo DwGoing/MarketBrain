@@ -1,12 +1,13 @@
 package model
 
-/*
-@title 配置表
-*/
+import "github.com/DwGoing/MarketBrain/pkg/enum"
+
 type Configs struct {
-	Mnemonic          string             `mapstructure:"MNEMONIC"`
-	WalletMaxNumber   int64              `mapstructure:"WALLET_MAX_NUMBER"`
-	ExpireTime        int64              `mapstructure:"EXPIRE_TIME"`
-	ExpireDelay       int64              `mapstructure:"EXPIRE_DELAY"`
-	CollectThresholds map[string]float32 `mapstructure:"COLLECT_THRESHOLDS"`
+	Mnemonic string  `mapstructure:"MNEMONIC" json:"Mnemonic"`
+	Chains   []Chain `mapstructure:"CHAINS" json:"Chains"`
+}
+
+type Chain struct {
+	Type  enum.ChainType `json:"Type"`
+	Nodes []string       `json:"Nodes"`
 }
