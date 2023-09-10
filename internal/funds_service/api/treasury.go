@@ -71,14 +71,6 @@ func CreateRechargeOrderApi(ctx *gin.Context) {
 	}
 	treasuryModule, _ := module.GetTreasury()
 	orderId, wallet, expireAt, err := treasuryModule.CreateRechargeOrder(
-		request.ExternalIdentity,
-		request.ExternalData,
-		request.CallbackUrl,
-		request.ChainType,
-		request.Amount,
-		request.WalletIndex,
-	)
-	if err != nil {
 		Response.Fail(ctx, enum.ApiErrorType_ServiceError, err)
 	}
 	Response.Success(ctx, CreateRechargeOrderResponse{
@@ -212,4 +204,81 @@ func CheckRechargeOrderStatusApi(ctx *gin.Context) {
 		response.Error = &msg
 	}
 	Response.Success(ctx, response)
+=======
+		return nil, err
+	}
+	return &CreateRechargeOrderResponse{
+		OrderId:  orderId,
+		ExpireAt: expireAt.String(),
+	}, nil
+}
+
+type CreateRechargeOrderApiRequest struct {
+	model.Request
+	ExternalIdentity string  `json:"externalIdentity"`
+	ExternalData     []byte  `json:"externalData"`
+	CallbackUrl      string  `json:"callbackUrl"`
+	ChainType        string  `json:"chainType"`
+	Amount           float64 `json:"amount"`
+	WalletIndex      int64   `json:"walletIndex"`
+}
+
+type CreateRechargeOrderApiResponse struct {
+	model.Response
+	OrderId  string    `json:"orderId"`
+	ExpireAt time.Time `json:"expireAt"`
+}
+
+// @title	创建充值订单
+// @param	Self	*Treasury		服务实例
+// @param	ctx		*gin.Context	上下文
+func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
+	var request CreateRechargeOrderApiRequest
+	err := ctx.ShouldBind(&request)
+	if err != nil {
+		ctx.JSON(200, model.Response{
+			Id:      request.Id,
+			Code:    enum.ApiErrorType_RequestBindError.Code(),
+			Message: err.Error(),
+		})
+		return
+	}
+	if strings.TrimSpace(request.Id) == "" ||
+		strings.TrimSpace(request.ExternalIdentity) == "" ||
+		strings.TrimSpace(request.CallbackUrl) == "" ||
+		strings.TrimSpace(request.ChainType) == "" ||
+		request.Amount < 1 ||
+		request.WalletIndex < 1 {
+		ctx.JSON(200, model.Response{
+			Id:      request.Id,
+			Code:    enum.ApiErrorType_RequestBindError.Code(),
+			Message: "parameter invaild",
+		})
+		return
+	}
+	orderId, expireAt, err := Self.createRechargeOrder(
+		request.ExternalIdentity,
+		request.ExternalData,
+		request.CallbackUrl,
+		request.ChainType,
+		request.Amount,
+		request.WalletIndex,
+	)
+	if err != nil {
+		ctx.JSON(200, model.Response{
+			Id:      request.Id,
+			Code:    enum.ApiErrorType_ServiceError.Code(),
+			Message: err.Error(),
+		})
+		return
+	}
+	ctx.JSON(200, CreateRechargeOrderApiResponse{
+		Response: model.Response{
+			Id:   request.Id,
+			Code: enum.ApiErrorType_Ok.Code(),
+		},
+		OrderId:  orderId,
+		ExpireAt: expireAt,
+	})
+>>>>>>> 38414f3 (✨ feat: 新增创建充值订单接口)
 }
