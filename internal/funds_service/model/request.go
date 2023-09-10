@@ -1,8 +1,11 @@
 package model
 
-type Request struct{}
+type Request struct {
+	Id string `json:"id"`
+}
 
 type Response struct {
-	Code    int64  `json:"code,omitempty"`
+	Id      string `json:"id"`
+	Code    int64  `json:"code"`
 	Message string `json:"message,omitempty"`
 }

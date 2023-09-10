@@ -2,8 +2,6 @@ syntax = "proto3";
 
 option go_package = "./;treasury_generated";
 
-import "google/protobuf/empty.proto";
-
 service Treasury {
     // 创建充值订单
     rpc CreateRechargeOrderRpc (CreateRechargeOrderRequest) returns (CreateRechargeOrderResponse);
