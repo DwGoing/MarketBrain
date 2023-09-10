@@ -1,4 +1,4 @@
-package model
+package module
 
 import (
 	"github.com/alibaba/ioc-golang/extension/config"
@@ -24,12 +24,11 @@ func NewStorage(module *Storage) (*Storage, error) {
 }
 
 // @title 	获取redis连接
-// @param 	Self 				*Storage 		模块实例
-// @param 	connectionString 	string 			连接字符串
-// @return 	_ 					*redis.Client 	Redis客户端
-// @return 	_ 					error 			异常信息
-func (Self *Storage) GetRedisClient(connectionString string) (*redis.Client, error) {
-	opt, err := redis.ParseURL(connectionString)
+// @param 	Self	*Storage 		模块实例
+// @return 	_ 		*redis.Client 	Redis客户端
+// @return 	_ 		error 			异常信息
+func (Self *Storage) GetRedisClient() (*redis.Client, error) {
+	opt, err := redis.ParseURL(Self.RedisConnectionString.Value())
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +37,11 @@ func (Self *Storage) GetRedisClient(connectionString string) (*redis.Client, err
 }
 
 // @title 	获取mysql连接
-// @param 	Self 				*Storage 		模块实例
-// @param 	connectionString 	string 		连接字符串
-// @return _ 					*gorm.DB	Mysql连接
-// @return _ 					error 		异常信息
-func (Self *Storage) GetMysqlClient(connectionString string) (*gorm.DB, error) {
-	db, err := gorm.Open(mysql.Open(connectionString), &gorm.Config{})
+// @param 	Self	*Storage 	模块实例
+// @return _ 		*gorm.DB	Mysql连接
+// @return _ 		error 		异常信息
+func (Self *Storage) GetMysqlClient() (*gorm.DB, error) {
+	db, err := gorm.Open(mysql.Open(Self.MysqlConnectionString.Value()), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

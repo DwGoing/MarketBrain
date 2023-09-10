@@ -11,7 +11,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -23,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TreasuryClient interface {
-	CreateChargeOrder(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CreateChargeOrderResponse, error)
+	CreateRechargeOrder(ctx context.Context, in *CreateRechargeOrderRequest, opts ...grpc.CallOption) (*CreateRechargeOrderResponse, error)
 }
 
 type treasuryClient struct {
@@ -34,9 +33,9 @@ func NewTreasuryClient(cc grpc.ClientConnInterface) TreasuryClient {
 	return &treasuryClient{cc}
 }
 
-func (c *treasuryClient) CreateChargeOrder(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CreateChargeOrderResponse, error) {
-	out := new(CreateChargeOrderResponse)
-	err := c.cc.Invoke(ctx, "/Treasury/CreateChargeOrder", in, out, opts...)
+func (c *treasuryClient) CreateRechargeOrder(ctx context.Context, in *CreateRechargeOrderRequest, opts ...grpc.CallOption) (*CreateRechargeOrderResponse, error) {
+	out := new(CreateRechargeOrderResponse)
+	err := c.cc.Invoke(ctx, "/Treasury/CreateRechargeOrder", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,7 @@ func (c *treasuryClient) CreateChargeOrder(ctx context.Context, in *emptypb.Empt
 // All implementations must embed UnimplementedTreasuryServer
 // for forward compatibility
 type TreasuryServer interface {
-	CreateChargeOrder(context.Context, *emptypb.Empty) (*CreateChargeOrderResponse, error)
+	CreateRechargeOrder(context.Context, *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error)
 	mustEmbedUnimplementedTreasuryServer()
 }
 
@@ -55,8 +54,8 @@ type TreasuryServer interface {
 type UnimplementedTreasuryServer struct {
 }
 
-func (UnimplementedTreasuryServer) CreateChargeOrder(context.Context, *emptypb.Empty) (*CreateChargeOrderResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateChargeOrder not implemented")
+func (UnimplementedTreasuryServer) CreateRechargeOrder(context.Context, *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateRechargeOrder not implemented")
 }
 func (UnimplementedTreasuryServer) mustEmbedUnimplementedTreasuryServer() {}
 
@@ -71,20 +70,20 @@ func RegisterTreasuryServer(s grpc.ServiceRegistrar, srv TreasuryServer) {
 	s.RegisterService(&Treasury_ServiceDesc, srv)
 }
 
-func _Treasury_CreateChargeOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+func _Treasury_CreateRechargeOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRechargeOrderRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TreasuryServer).CreateChargeOrder(ctx, in)
+		return srv.(TreasuryServer).CreateRechargeOrder(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Treasury/CreateChargeOrder",
+		FullMethod: "/Treasury/CreateRechargeOrder",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TreasuryServer).CreateChargeOrder(ctx, req.(*emptypb.Empty))
+		return srv.(TreasuryServer).CreateRechargeOrder(ctx, req.(*CreateRechargeOrderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -97,8 +96,8 @@ var Treasury_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TreasuryServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateChargeOrder",
-			Handler:    _Treasury_CreateChargeOrder_Handler,
+			MethodName: "CreateRechargeOrder",
+			Handler:    _Treasury_CreateRechargeOrder_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

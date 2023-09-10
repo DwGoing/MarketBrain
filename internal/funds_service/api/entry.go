@@ -8,9 +8,6 @@ func TreasuryRpc() *Treasury {
 }
 
 func TreasuryApi(router *gin.RouterGroup) {
-	router.GET("ok", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
+	api, _ := GetTreasury()
+	router.POST("createRechargeOrder", api.CreateRechargeOrderApi)
 }

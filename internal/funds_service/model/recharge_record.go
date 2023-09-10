@@ -11,28 +11,27 @@ import (
 
 type RechargeRecord struct {
 	Record
-	ExternalIdentity string              `gorm:"column:EXTERNAL_IDENTITY"`
-	ExternalData     []byte              `gorm:"column:EXTERNAL_DATA"`
-	CallbackUrl      string              `gorm:"column:CALLBACK_URL"`
-	Chain            string              `gorm:"column:CHAIN"`
-	Amount           string              `gorm:"column:AMOUNT"`
-	WalletIndex      int64               `gorm:"column:WALLET_INDEX"`
-	WalletAddress    string              `gorm:"column:WALLET_ADDRESS"`
-	BeforeBalance    string              `gorm:"column:BDFORE_BALANCE"`
-	AfterBalance     string              `gorm:"column:AFTER_BALANCE"`
-	Status           enum.RechargeStatus `gorm:"column:STATUS"`
-	ExpireAt         time.Time           `gorm:"column:EXPIRE_AT"`
+	ExternalIdentity string    `gorm:"column:EXTERNAL_IDENTITY"`
+	ExternalData     []byte    `gorm:"column:EXTERNAL_DATA"`
+	CallbackUrl      string    `gorm:"column:CALLBACK_URL"`
+	ChainType        string    `gorm:"column:CHAIN_TYPE"`
+	Amount           float64   `gorm:"column:AMOUNT"`
+	WalletIndex      int64     `gorm:"column:WALLET_INDEX"`
+	WalletAddress    string    `gorm:"column:WALLET_ADDRESS"`
+	Status           string    `gorm:"column:STATUS"`
+	ExpireAt         time.Time `gorm:"column:EXPIRE_AT"`
 }
 
-func CreateRechargeRecord(client *gorm.DB, record RechargeRecord) (string, error) {
+func CreateRechargeRecord(client *gorm.DB, record *RechargeRecord) (*RechargeRecord, error) {
 	record.Id = uuid.NewString()
 	record.CreatedAt = time.Now()
 	record.UpdatedAt = time.Now()
+	record.Status = enum.RechargeStatus_UNPAID.String()
 	result := client.Table("RECHARGE_RECORD").Create(&record)
 	if result.Error != nil {
-		return "", result.Error
+		return nil, result.Error
 	}
-	return record.Id, nil
+	return record, nil
 }
 
 func DeleteRechargeRecords(client *gorm.DB, opt DeleteOption) error {

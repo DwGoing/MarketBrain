@@ -10,7 +10,6 @@ import (
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	util "github.com/alibaba/ioc-golang/autowire/util"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func init() {
@@ -32,15 +31,15 @@ func init() {
 }
 
 type treasury_ struct {
-	CreateChargeOrder_ func(ctx contextx.Context, request *emptypb.Empty) (*CreateChargeOrderResponse, error)
+	CreateRechargeOrder_ func(ctx contextx.Context, request *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error)
 }
 
-func (t *treasury_) CreateChargeOrder(ctx contextx.Context, request *emptypb.Empty) (*CreateChargeOrderResponse, error) {
-	return t.CreateChargeOrder_(ctx, request)
+func (t *treasury_) CreateRechargeOrder(ctx contextx.Context, request *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error) {
+	return t.CreateRechargeOrder_(ctx, request)
 }
 
 type TreasuryIOCInterface interface {
-	CreateChargeOrder(ctx contextx.Context, request *emptypb.Empty) (*CreateChargeOrderResponse, error)
+	CreateRechargeOrder(ctx contextx.Context, request *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error)
 }
 
 var _treasurySDID string

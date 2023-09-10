@@ -155,7 +155,7 @@ func startFundsService() error {
 		return err
 	}
 	// 实例化服务
-	_, err = service.GetFundsServiceSingleton()
+	_, err = service.GetFundsSingleton()
 	if err != nil {
 		return err
 	}
