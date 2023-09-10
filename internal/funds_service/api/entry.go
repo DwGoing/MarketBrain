@@ -1,13 +1,16 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
+	"github.com/gin-gonic/gin"
+)
 
-func TreasuryRpc() *Treasury {
-	api, _ := GetTreasury()
-	return api
+func TreasuryRpc() *module.Treasury {
+	treasury, _ := module.GetTreasury()
+	return treasury
 }
 
 func TreasuryApi(router *gin.RouterGroup) {
-	api, _ := GetTreasury()
-	router.POST("createRechargeOrder", api.CreateRechargeOrderApi)
+	treasury, _ := module.GetTreasury()
+	router.POST("createRechargeOrder", treasury.CreateRechargeOrderApi)
 }

@@ -9,18 +9,9 @@ import (
 
 // +ioc:autowire=true
 // +ioc:autowire:type=normal
-// +ioc:autowire:constructFunc=NewStorage
 type Storage struct {
 	RedisConnectionString *config.ConfigString `config:",storage.redis"`
 	MysqlConnectionString *config.ConfigString `config:",storage.mysql"`
-}
-
-// @title	构造函数
-// @param 	service *Storage 	模块实例
-// @return _ 		*Storage 	模块实例
-// @return _ 		error 		异常信息
-func NewStorage(module *Storage) (*Storage, error) {
-	return module, nil
 }
 
 // @title 	获取redis连接

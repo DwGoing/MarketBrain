@@ -1,4 +1,4 @@
-package api
+package module
 
 import (
 	context "context"
@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // +ioc:autowire=true
@@ -17,11 +17,11 @@ import (
 type Treasury struct {
 	UnimplementedTreasuryServer
 
-	Storage *module.Storage `normal:""`
+	Storage *Storage `normal:""`
 }
 
 // @title	创建充值订单
-// @param	Self				*Treasury		服务实例
+// @param	Self				*Treasury		模块实例
 // @param	externalIdentity	string			扩展标识
 // @param	externalData		[]byte			扩展数据
 // @param	callbackUrl			string			回调链接
@@ -161,4 +161,17 @@ func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
 		OrderId:  orderId,
 		ExpireAt: expireAt,
 	})
+}
+
+// @title	检查充值订单状态
+// @param	Self	*Treasury	服务实例
+// @return	_		error		异常信息
+func (Self *Treasury) CheckRechargeOrderStatus() error {
+	zap.S().Errorf("check recharge order error: %s", "xxxxxxx")
+	return nil
+	// client, err := Self.Storage.GetMysqlClient()
+	// if err != nil {
+	// 	zap.S().Errorf("check recharge order error: %s", err)
+	// 	return
+	// }
 }
