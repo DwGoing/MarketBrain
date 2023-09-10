@@ -7,13 +7,11 @@ import (
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/api"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
 	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
-	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"gorm.io/gorm"
 )
 
 // +ioc:autowire=true
@@ -22,10 +20,7 @@ import (
 type Funds struct {
 	RpcPort  *config.ConfigInt `config:",service.rpc"`
 	HttpPort *config.ConfigInt `config:",service.http"`
-
-	crontab     *cron.Cron
-	redisClient *redis.Client
-	mysqlClient *gorm.DB
+	EventBus *module.EventBus  `singleton:""`
 }
 
 // @title	构造函数
@@ -33,8 +28,6 @@ type Funds struct {
 // @return _ 		*FundsService 	服务实例
 // @return _ 		error 			异常信息
 func NewFunds(service *Funds) (*Funds, error) {
-	service.crontab = cron.New()
-	service.crontab.Start()
 	// 初始化Rpc
 	go func() {
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", service.RpcPort.Value()))
@@ -42,7 +35,7 @@ func NewFunds(service *Funds) (*Funds, error) {
 			zap.S().Fatalf("监听器初始化失败：%s", err)
 		}
 		server := grpc.NewServer()
-		api.RegisterTreasuryServer(server, api.TreasuryRpc())
+		module.RegisterTreasuryServer(server, api.TreasuryRpc())
 		zap.S().Infof("RPC服务正在监听: %v", listener.Addr())
 		if err = server.Serve(listener); err != nil {
 			zap.S().Errorf("RPC服务开启失败: %s", err)
