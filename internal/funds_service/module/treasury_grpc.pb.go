@@ -4,7 +4,7 @@
 // - protoc             v4.23.4
 // source: proto/funds_service/treasury.proto
 
-package api
+package module
 
 import (
 	context "context"
