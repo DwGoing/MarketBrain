@@ -7,7 +7,11 @@ import (
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/api"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module/config_generated"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
+	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -35,7 +39,8 @@ func NewFunds(service *Funds) (*Funds, error) {
 			zap.S().Fatalf("监听器初始化失败：%s", err)
 		}
 		server := grpc.NewServer()
-		module.RegisterTreasuryServer(server, api.TreasuryRpc())
+		config_generated.RegisterConfigServer(server, api.ConfigRpc())
+		treasury_generated.RegisterTreasuryServer(server, api.TreasuryRpc())
 		zap.S().Infof("RPC服务正在监听: %v", listener.Addr())
 		if err = server.Serve(listener); err != nil {
 			zap.S().Errorf("RPC服务开启失败: %s", err)
@@ -44,6 +49,23 @@ func NewFunds(service *Funds) (*Funds, error) {
 	// 初始化Http
 	go func() {
 		engine := gin.Default()
+		// 验证RequestId
+		engine.Use(func(ctx *gin.Context) {
+			hasRequestId := false
+			switch ctx.Request.Method {
+			case "GET":
+				_, hasRequestId = ctx.GetQuery("requestId")
+			}
+			if !hasRequestId {
+				ctx.JSON(200, model.Response{
+					Code:    enum.ApiErrorType_ParameterError.Code(),
+					Message: "request id invaild",
+				})
+				ctx.Abort()
+			}
+		})
+		config := engine.Group("config")
+		api.ConfigApi(config)
 		treasury := engine.Group("treasury")
 		api.TreasuryApi(treasury)
 		server := &http.Server{
