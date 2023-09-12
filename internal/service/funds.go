@@ -1,16 +1,18 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/api"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/module/config_generated"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/alibaba/ioc-golang/extension/config"
 	"github.com/gin-gonic/gin"
@@ -51,18 +53,11 @@ func NewFunds(service *Funds) (*Funds, error) {
 		engine := gin.Default()
 		// 验证RequestId
 		engine.Use(func(ctx *gin.Context) {
-			hasRequestId := false
-			switch ctx.Request.Method {
-			case "GET":
-				_, hasRequestId = ctx.GetQuery("requestId")
+			requestId, ok := ctx.GetQuery("requestId")
+			if !ok || strings.TrimSpace(requestId) == "" {
+				Response.Fail(ctx, enum.ApiErrorType_ParameterError, errors.New("request id invaild"))
 			}
-			if !hasRequestId {
-				ctx.JSON(200, model.Response{
-					Code:    enum.ApiErrorType_ParameterError.Code(),
-					Message: "request id invaild",
-				})
-				ctx.Abort()
-			}
+			ctx.Set("requestId", requestId)
 		})
 		config := engine.Group("config")
 		api.ConfigApi(config)
