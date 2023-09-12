@@ -7,16 +7,49 @@ package module
 
 import (
 	contextx "context"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module/config_generated"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	singleton "github.com/alibaba/ioc-golang/autowire/singleton"
 	util "github.com/alibaba/ioc-golang/autowire/util"
 	"github.com/gin-gonic/gin"
 	v9 "github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"gorm.io/gorm"
 )
 
 func init() {
+	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &chain_{}
+		},
+	})
+	chainStructDescriptor := &autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &Chain{}
+		},
+		Metadata: map[string]interface{}{
+			"aop":      map[string]interface{}{},
+			"autowire": map[string]interface{}{},
+		},
+	}
+	normal.RegisterStructDescriptor(chainStructDescriptor)
+	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &config_{}
+		},
+	})
+	configStructDescriptor := &autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &Config{}
+		},
+		Metadata: map[string]interface{}{
+			"aop":      map[string]interface{}{},
+			"autowire": map[string]interface{}{},
+		},
+	}
+	normal.RegisterStructDescriptor(configStructDescriptor)
 	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
 		Factory: func() interface{} {
 			return &eventBus_{}
@@ -70,6 +103,32 @@ func init() {
 }
 
 type EventBusConstructFunc func(impl *EventBus) (*EventBus, error)
+type chain_ struct {
+}
+
+type config_ struct {
+	Set_     func(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
+	SetApi_  func(ctx *gin.Context)
+	Load_    func(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
+	LoadApi_ func(ctx *gin.Context)
+}
+
+func (c *config_) Set(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error) {
+	return c.Set_(ctx, request)
+}
+
+func (c *config_) SetApi(ctx *gin.Context) {
+	c.SetApi_(ctx)
+}
+
+func (c *config_) Load(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error) {
+	return c.Load_(ctx, request)
+}
+
+func (c *config_) LoadApi(ctx *gin.Context) {
+	c.LoadApi_(ctx)
+}
+
 type eventBus_ struct {
 }
 
@@ -87,12 +146,11 @@ func (s *storage_) GetMysqlClient() (*gorm.DB, error) {
 }
 
 type treasury_ struct {
-	CreateRechargeOrder_      func(ctx contextx.Context, request *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error)
-	CreateRechargeOrderApi_   func(ctx *gin.Context)
-	CheckRechargeOrderStatus_ func() error
+	CreateRechargeOrder_    func(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
+	CreateRechargeOrderApi_ func(ctx *gin.Context)
 }
 
-func (t *treasury_) CreateRechargeOrder(ctx contextx.Context, request *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error) {
+func (t *treasury_) CreateRechargeOrder(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error) {
 	return t.CreateRechargeOrder_(ctx, request)
 }
 
@@ -100,8 +158,14 @@ func (t *treasury_) CreateRechargeOrderApi(ctx *gin.Context) {
 	t.CreateRechargeOrderApi_(ctx)
 }
 
-func (t *treasury_) CheckRechargeOrderStatus() error {
-	return t.CheckRechargeOrderStatus_()
+type ChainIOCInterface interface {
+}
+
+type ConfigIOCInterface interface {
+	Set(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
+	SetApi(ctx *gin.Context)
+	Load(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
+	LoadApi(ctx *gin.Context)
 }
 
 type EventBusIOCInterface interface {
@@ -113,9 +177,60 @@ type StorageIOCInterface interface {
 }
 
 type TreasuryIOCInterface interface {
-	CreateRechargeOrder(ctx contextx.Context, request *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error)
+	CreateRechargeOrder(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
 	CreateRechargeOrderApi(ctx *gin.Context)
-	CheckRechargeOrderStatus() error
+}
+
+var _chainSDID string
+
+func GetChain() (*Chain, error) {
+	if _chainSDID == "" {
+		_chainSDID = util.GetSDIDByStructPtr(new(Chain))
+	}
+	i, err := normal.GetImpl(_chainSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(*Chain)
+	return impl, nil
+}
+
+func GetChainIOCInterface() (ChainIOCInterface, error) {
+	if _chainSDID == "" {
+		_chainSDID = util.GetSDIDByStructPtr(new(Chain))
+	}
+	i, err := normal.GetImplWithProxy(_chainSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(ChainIOCInterface)
+	return impl, nil
+}
+
+var _configSDID string
+
+func GetConfig() (*Config, error) {
+	if _configSDID == "" {
+		_configSDID = util.GetSDIDByStructPtr(new(Config))
+	}
+	i, err := normal.GetImpl(_configSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(*Config)
+	return impl, nil
+}
+
+func GetConfigIOCInterface() (ConfigIOCInterface, error) {
+	if _configSDID == "" {
+		_configSDID = util.GetSDIDByStructPtr(new(Config))
+	}
+	i, err := normal.GetImplWithProxy(_configSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(ConfigIOCInterface)
+	return impl, nil
 }
 
 var _eventBusSDID string
