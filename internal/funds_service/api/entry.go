@@ -5,12 +5,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TreasuryRpc() *module.Treasury {
-	treasury, _ := module.GetTreasury()
-	return treasury
+// @title	Confgig Rpc接口
+func ConfigRpc() *module.Config {
+	config, _ := module.GetConfig()
+	return config
 }
 
-func TreasuryApi(router *gin.RouterGroup) {
-	treasury, _ := module.GetTreasury()
-	router.POST("createRechargeOrder", treasury.CreateRechargeOrderApi)
+// @title	Confgig Http接口
+// @param	router	*gin.RouterGroup	路由
+func ConfigApi(router *gin.RouterGroup) {
+	config, _ := module.GetConfig()
+	router.POST("set", config.SetApi)
+	router.GET("load", config.LoadApi)
 }
