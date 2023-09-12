@@ -4,7 +4,7 @@
 // - protoc             v4.23.4
 // source: proto/funds_service/treasury.proto
 
-package module
+package treasury_generated
 
 import (
 	context "context"
