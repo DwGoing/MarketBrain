@@ -7,15 +7,16 @@ import (
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 // +ioc:autowire=true
 // +ioc:autowire:type=normal
 type Treasury struct {
-	UnimplementedTreasuryServer
+	treasury_generated.UnimplementedTreasuryServer
 
 	Storage *Storage `normal:""`
 }
@@ -46,7 +47,7 @@ func (Self *Treasury) createRechargeOrder(
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	record := &model.RechargeRecord{
+	record := &model.RechargeOrderRecord{
 		ExternalIdentity: externalIdentity,
 		ExternalData:     externalData,
 		CallbackUrl:      callbackUrl,
@@ -56,7 +57,7 @@ func (Self *Treasury) createRechargeOrder(
 		WalletAddress:    "0x",
 		ExpireAt:         time.Now(),
 	}
-	record, err = model.CreateRechargeRecord(client, record)
+	record, err = model.CreateRechargeOrderRecord(client, record)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -64,12 +65,12 @@ func (Self *Treasury) createRechargeOrder(
 }
 
 // @title	创建充值订单
-// @param	Self		*Treasury						服务实例
-// @param	ctx			context.Context					上下文
-// @param	request		*CreateRechargeOrderRequest		请求体
-// @return	_			*CreateRechargeOrderResponse	响应体
-// @return	_			error							异常信息
-func (Self *Treasury) CreateRechargeOrder(ctx context.Context, request *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error) {
+// @param	Self		*Treasury										服务实例
+// @param	ctx			context.Context									上下文
+// @param	request		*treasury_generated.CreateRechargeOrderRequest	请求体
+// @return	_			*treasury_generated.CreateRechargeOrderResponse	响应体
+// @return	_			error											异常信息
+func (Self *Treasury) CreateRechargeOrder(ctx context.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error) {
 	if strings.TrimSpace(request.ExternalIdentity) == "" ||
 		strings.TrimSpace(request.CallbackUrl) == "" ||
 		strings.TrimSpace(request.ChainType) == "" ||
@@ -88,14 +89,13 @@ func (Self *Treasury) CreateRechargeOrder(ctx context.Context, request *CreateRe
 	if err != nil {
 		return nil, err
 	}
-	return &CreateRechargeOrderResponse{
+	return &treasury_generated.CreateRechargeOrderResponse{
 		OrderId:  orderId,
 		ExpireAt: expireAt.String(),
 	}, nil
 }
 
 type CreateRechargeOrderApiRequest struct {
-	model.Request
 	ExternalIdentity string  `json:"externalIdentity"`
 	ExternalData     []byte  `json:"externalData"`
 	CallbackUrl      string  `json:"callbackUrl"`
@@ -105,7 +105,6 @@ type CreateRechargeOrderApiRequest struct {
 }
 
 type CreateRechargeOrderApiResponse struct {
-	model.Response
 	OrderId  string    `json:"orderId"`
 	ExpireAt time.Time `json:"expireAt"`
 }
@@ -117,25 +116,14 @@ func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
 	var request CreateRechargeOrderApiRequest
 	err := ctx.ShouldBind(&request)
 	if err != nil {
-		ctx.JSON(200, model.Response{
-			Id:      request.Id,
-			Code:    enum.ApiErrorType_RequestBindError.Code(),
-			Message: err.Error(),
-		})
-		return
+		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
 	}
-	if strings.TrimSpace(request.Id) == "" ||
-		strings.TrimSpace(request.ExternalIdentity) == "" ||
+	if strings.TrimSpace(request.ExternalIdentity) == "" ||
 		strings.TrimSpace(request.CallbackUrl) == "" ||
 		strings.TrimSpace(request.ChainType) == "" ||
 		request.Amount < 1 ||
 		request.WalletIndex < 1 {
-		ctx.JSON(200, model.Response{
-			Id:      request.Id,
-			Code:    enum.ApiErrorType_RequestBindError.Code(),
-			Message: "parameter invaild",
-		})
-		return
+		Response.Fail(ctx, enum.ApiErrorType_ParameterError, err)
 	}
 	orderId, expireAt, err := Self.createRechargeOrder(
 		request.ExternalIdentity,
@@ -146,32 +134,10 @@ func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
 		request.WalletIndex,
 	)
 	if err != nil {
-		ctx.JSON(200, model.Response{
-			Id:      request.Id,
-			Code:    enum.ApiErrorType_ServiceError.Code(),
-			Message: err.Error(),
-		})
-		return
+		Response.Fail(ctx, enum.ApiErrorType_ServiceError, err)
 	}
-	ctx.JSON(200, CreateRechargeOrderApiResponse{
-		Response: model.Response{
-			Id:   request.Id,
-			Code: enum.ApiErrorType_Ok.Code(),
-		},
+	Response.Success(ctx, CreateRechargeOrderApiResponse{
 		OrderId:  orderId,
 		ExpireAt: expireAt,
 	})
-}
-
-// @title	检查充值订单状态
-// @param	Self	*Treasury	服务实例
-// @return	_		error		异常信息
-func (Self *Treasury) CheckRechargeOrderStatus() error {
-	zap.S().Errorf("check recharge order error: %s", "xxxxxxx")
-	return nil
-	// client, err := Self.Storage.GetMysqlClient()
-	// if err != nil {
-	// 	zap.S().Errorf("check recharge order error: %s", err)
-	// 	return
-	// }
 }
