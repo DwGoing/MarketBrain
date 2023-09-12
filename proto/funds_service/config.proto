@@ -21,6 +21,15 @@ message SetRequest {
     map<string, ChainConfig> chainConfigs = 2; // 链相关配置
 }
 
+message ChainConfig {
+    repeated string nodes = 1;
+}
+
+message SetRequest {
+    optional string mnemonic = 1;
+    map<string, ChainConfig> chainConfigs = 2;
+}
+
 message LoadResponse {
     string mnemonic = 1; // 助记词
     map<string, ChainConfig> chainConfigs = 2; // 链相关配置
