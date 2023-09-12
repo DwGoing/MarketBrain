@@ -48,3 +48,16 @@ func TreasuryApi(router *gin.RouterGroup) {
 	router.POST("cancelRechargeOrder", CancelRechargeOrderApi)
 	router.GET("checkRechargeOrderStatus", CheckRechargeOrderStatusApi)
 }
+
+// @title	Treasury Rpc接口
+func TreasuryRpc() *module.Treasury {
+	treasury, _ := module.GetTreasury()
+	return treasury
+}
+
+// @title	Treasury Http接口
+// @param	router	*gin.RouterGroup	路由
+func TreasuryApi(router *gin.RouterGroup) {
+	treasury, _ := module.GetTreasury()
+	router.POST("createRechargeOrder", treasury.CreateRechargeOrderApi)
+}
