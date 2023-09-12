@@ -159,6 +159,7 @@ require (
 )
 
 require (
+	github.com/ahmetb/go-linq v3.0.0+incompatible
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/cosmos/btcutil v1.0.5
 	github.com/davecgh/go-spew v1.1.1 // indirect

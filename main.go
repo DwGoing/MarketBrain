@@ -116,7 +116,7 @@ func main() {
 	}
 	executablePath = filepath.Dir(executablePath)
 	hook, err := rotatelogs.New(
-		path.Join(executablePath, "./log", "%Y%m%d%H.log"),
+		path.Join(executablePath, "./log", "%Y%m%d.log"),
 		rotatelogs.WithRotationCount(5),
 		rotatelogs.WithRotationTime(time.Hour*24),
 	)
