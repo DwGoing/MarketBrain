@@ -96,6 +96,7 @@ func TestGetAccount(t *testing.T) {
 		{Currency_BTC_SegWit, 0, "3JgMsmq79Ku8LWip3VCvF1pPQgbTrtx1gG"},
 		{Currency_BTC_NativeSegWit, 0, "bc1q96cqwy3w2q7qelhecz3l2wu5ddc3lzfy0z6p0r"},
 		{Currency_ETH, 0, "0xbb03D2098FAa5867FA3381c9b1CB95F45477916E"},
+		{Currency_TRON, 0, "TYq73v8nCqi85g5CJxSNYDW5QKvaffAuPh"},
 	}
 	for _, test := range tests {
 		hdWallet, _ := FromMnemonic(mnemonic, "")

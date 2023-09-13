@@ -7,4 +7,5 @@ const (
 	Currency_BTC_SegWit       Currency = 2
 	Currency_BTC_NativeSegWit Currency = 3
 	Currency_ETH              Currency = 4
+	Currency_TRON             Currency = 5
 )
