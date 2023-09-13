@@ -6,6 +6,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/cosmos/btcutil/bech32"
 	"github.com/ethereum/go-ethereum/crypto"
+	tronCommon "github.com/fbsobreira/gotron-sdk/pkg/common"
 )
 
 type Account struct {
@@ -44,6 +45,12 @@ func (Self *Account) GetAddress() string {
 		}
 	case Currency_ETH:
 		address = crypto.PubkeyToAddress(Self.PrivateKey.ToECDSA().PublicKey).Hex()
+	case Currency_TRON:
+		ethAddress := crypto.PubkeyToAddress(Self.PrivateKey.ToECDSA().PublicKey)
+		tronAddress := make([]byte, 0)
+		tronAddress = append(tronAddress, byte(0x41))
+		tronAddress = append(tronAddress, ethAddress.Bytes()...)
+		address = tronCommon.EncodeCheck(tronAddress)
 	}
 	return address
 }

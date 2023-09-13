@@ -107,6 +107,9 @@ func (Self *HDWallet) GetAccount(currency Currency, index int64) (*Account, erro
 	case Currency_ETH:
 		version = Version_xprv
 		path = "m/44'/60'/0'/0/"
+	case Currency_TRON:
+		version = Version_xprv
+		path = "m/44'/195'/0'/0/"
 	default:
 		return nil, errors.New("unsupportted currency")
 	}
