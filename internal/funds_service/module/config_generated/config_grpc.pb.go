@@ -23,8 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ConfigClient interface {
-	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Load(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoadResponse, error)
+	SetRpc(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LoadRpc(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoadResponse, error)
 }
 
 type configClient struct {
@@ -35,18 +35,18 @@ func NewConfigClient(cc grpc.ClientConnInterface) ConfigClient {
 	return &configClient{cc}
 }
 
-func (c *configClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *configClient) SetRpc(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/Config/Set", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/Config/SetRpc", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *configClient) Load(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoadResponse, error) {
+func (c *configClient) LoadRpc(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoadResponse, error) {
 	out := new(LoadResponse)
-	err := c.cc.Invoke(ctx, "/Config/Load", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/Config/LoadRpc", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func (c *configClient) Load(ctx context.Context, in *emptypb.Empty, opts ...grpc
 // All implementations must embed UnimplementedConfigServer
 // for forward compatibility
 type ConfigServer interface {
-	Set(context.Context, *SetRequest) (*emptypb.Empty, error)
-	Load(context.Context, *emptypb.Empty) (*LoadResponse, error)
+	SetRpc(context.Context, *SetRequest) (*emptypb.Empty, error)
+	LoadRpc(context.Context, *emptypb.Empty) (*LoadResponse, error)
 	mustEmbedUnimplementedConfigServer()
 }
 
@@ -66,11 +66,11 @@ type ConfigServer interface {
 type UnimplementedConfigServer struct {
 }
 
-func (UnimplementedConfigServer) Set(context.Context, *SetRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Set not implemented")
+func (UnimplementedConfigServer) SetRpc(context.Context, *SetRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetRpc not implemented")
 }
-func (UnimplementedConfigServer) Load(context.Context, *emptypb.Empty) (*LoadResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Load not implemented")
+func (UnimplementedConfigServer) LoadRpc(context.Context, *emptypb.Empty) (*LoadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoadRpc not implemented")
 }
 func (UnimplementedConfigServer) mustEmbedUnimplementedConfigServer() {}
 
@@ -85,38 +85,38 @@ func RegisterConfigServer(s grpc.ServiceRegistrar, srv ConfigServer) {
 	s.RegisterService(&Config_ServiceDesc, srv)
 }
 
-func _Config_Set_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Config_SetRpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ConfigServer).Set(ctx, in)
+		return srv.(ConfigServer).SetRpc(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Config/Set",
+		FullMethod: "/Config/SetRpc",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConfigServer).Set(ctx, req.(*SetRequest))
+		return srv.(ConfigServer).SetRpc(ctx, req.(*SetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Config_Load_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Config_LoadRpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ConfigServer).Load(ctx, in)
+		return srv.(ConfigServer).LoadRpc(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Config/Load",
+		FullMethod: "/Config/LoadRpc",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConfigServer).Load(ctx, req.(*emptypb.Empty))
+		return srv.(ConfigServer).LoadRpc(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -129,12 +129,12 @@ var Config_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ConfigServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Set",
-			Handler:    _Config_Set_Handler,
+			MethodName: "SetRpc",
+			Handler:    _Config_SetRpc_Handler,
 		},
 		{
-			MethodName: "Load",
-			Handler:    _Config_Load_Handler,
+			MethodName: "LoadRpc",
+			Handler:    _Config_LoadRpc_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
