@@ -5,8 +5,8 @@ option go_package = "./;config_generated";
 import "google/protobuf/empty.proto";
 
 service Config {
-    rpc Set (SetRequest) returns (google.protobuf.Empty) {}
-    rpc Load (google.protobuf.Empty) returns (LoadResponse) {}
+    rpc SetRpc (SetRequest) returns (google.protobuf.Empty) {}
+    rpc LoadRpc (google.protobuf.Empty) returns (LoadResponse) {}
 }
 
 message ChainConfig {

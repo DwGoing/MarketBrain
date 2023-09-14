@@ -3,7 +3,7 @@ syntax = "proto3";
 option go_package = "./;treasury_generated";
 
 service Treasury {
-    rpc CreateRechargeOrder (CreateRechargeOrderRequest) returns (CreateRechargeOrderResponse);
+    rpc CreateRechargeOrderRpc (CreateRechargeOrderRequest) returns (CreateRechargeOrderResponse);
 }
 
 message CreateRechargeOrderRequest {
