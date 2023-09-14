@@ -624,13 +624,6 @@ func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
 	if err != nil {
 		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
 	}
-	if strings.TrimSpace(request.ExternalIdentity) == "" ||
-		strings.TrimSpace(request.CallbackUrl) == "" ||
-		strings.TrimSpace(request.ChainType) == "" ||
-		request.Amount < 1 ||
-		request.WalletIndex < 1 {
-		Response.Fail(ctx, enum.ApiErrorType_ParameterError, err)
-	}
 	orderId, expireAt, err := Self.createRechargeOrder(
 		request.ExternalIdentity,
 		request.ExternalData,
