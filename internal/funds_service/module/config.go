@@ -64,7 +64,7 @@ func (Self *Config) set(configs map[string]any) error {
 // @param	request		*config_generated.SetRequest	请求体
 // @return	_			*emptypb.Empty					响应体
 // @return	_			error							异常信息
-func (Self *Config) Set(ctx context.Context, request *config_generated.SetRequest) (*emptypb.Empty, error) {
+func (Self *Config) SetRpc(ctx context.Context, request *config_generated.SetRequest) (*emptypb.Empty, error) {
 	configs := make(map[string]any)
 	if request.Mnemonic != nil {
 		configs["MNEMONIC"] = request.Mnemonic
@@ -149,12 +149,20 @@ func (Self *Config) load() (*Configs, error) {
 }
 
 // @title	加载配置
+// @param	Self	*Config		模块实例
+// @return	_		*Configs	配置
+// @return	_		error		异常信息
+func (Self *Config) Load() (*Configs, error) {
+	return Self.load()
+}
+
+// @title	加载配置
 // @param	Self		*Config							服务实例
 // @param	ctx			context.Context					上下文
 // @param	request		*mptypb.Empty					请求体
 // @return	_			*config_generated.LoadResponse	响应体
 // @return	_			error							异常信息
-func (Self *Config) Load(ctx context.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error) {
+func (Self *Config) LoadRpc(ctx context.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error) {
 	configs, err := Self.load()
 	if err != nil {
 		return nil, err
