@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/pkg/enum"
@@ -16,10 +17,10 @@ type RechargeOrderRecord struct {
 	CallbackUrl      string    `gorm:"column:CALLBACK_URL"`
 	ChainType        string    `gorm:"column:CHAIN_TYPE"`
 	Amount           float64   `gorm:"column:AMOUNT"`
-	WalletIndex      int64     `gorm:"column:WALLET_INDEX"`
-	WalletAddress    string    `gorm:"column:WALLET_ADDRESS"`
+	Wallet           string    `gorm:"column:WALLET"`
 	Status           string    `gorm:"column:STATUS"`
 	ExpireAt         time.Time `gorm:"column:EXPIRE_AT"`
+	TxHash           string    `gorm:"column:TX_HASH"`
 }
 
 func CreateRechargeOrderRecord(client *gorm.DB, record *RechargeOrderRecord) (*RechargeOrderRecord, error) {
@@ -27,9 +28,23 @@ func CreateRechargeOrderRecord(client *gorm.DB, record *RechargeOrderRecord) (*R
 	record.CreatedAt = time.Now()
 	record.UpdatedAt = time.Now()
 	record.Status = enum.RechargeStatus_UNPAID.String()
-	result := client.Table("RECHARGE_ORDER").Create(&record)
-	if result.Error != nil {
-		return nil, result.Error
+	err := client.Transaction(func(tx *gorm.DB) error {
+		var count int64
+		result := tx.Table("RECHARGE_ORDER").Where("`EXTERNAL_IDENTITY` = ?", record.ExternalIdentity).Count(&count)
+		if result.Error != nil {
+			return result.Error
+		}
+		if count > 0 {
+			return errors.New("order existed")
+		}
+		result = tx.Table("RECHARGE_ORDER").Create(&record)
+		if result.Error != nil {
+			return result.Error
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return record, nil
 }
