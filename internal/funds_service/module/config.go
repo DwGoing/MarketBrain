@@ -61,7 +61,7 @@ func (Self *Config) set(configs map[string]any) error {
 }
 
 // @title	更新配置
-// @param	Self		*Config							服务实例
+// @param	Self		*Config							模块实例
 // @param	ctx			context.Context					上下文
 // @param	request		*config_generated.SetRequest	请求体
 // @return	_			*emptypb.Empty					响应体
@@ -93,7 +93,7 @@ type SetRequest struct {
 }
 
 // @title	更新配置
-// @param	Self	*Config			服务实例
+// @param	Self	*Config			模块实例
 // @param	ctx		*gin.Context	上下文
 func (Self *Config) SetApi(ctx *gin.Context) {
 	var request SetRequest
@@ -159,7 +159,7 @@ func (Self *Config) Load() (*Configs, error) {
 }
 
 // @title	加载配置
-// @param	Self		*Config							服务实例
+// @param	Self		*Config							模块实例
 // @param	ctx			context.Context					上下文
 // @param	request		*mptypb.Empty					请求体
 // @return	_			*config_generated.LoadResponse	响应体
@@ -182,7 +182,7 @@ func (Self *Config) LoadRpc(ctx context.Context, request *emptypb.Empty) (*confi
 }
 
 // @title	加载配置
-// @param	Self	*Config			服务实例
+// @param	Self	*Config			模块实例
 // @param	ctx		*gin.Context	上下文
 func (Self *Config) LoadApi(ctx *gin.Context) {
 	configs, err := Self.load()
