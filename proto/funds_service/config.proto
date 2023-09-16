@@ -10,7 +10,8 @@ service Config {
 }
 
 message ChainConfig {
-    repeated string nodes = 1;
+    string usdt = 1;
+    repeated string nodes = 2;
 }
 
 message SetRequest {
