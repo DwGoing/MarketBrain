@@ -17,8 +17,6 @@ import (
 // +ioc:autowire:type=normal
 type Config struct {
 	config_generated.UnimplementedConfigServer
-
-	Storage *Storage `normal:""`
 }
 
 type Configs struct {
@@ -44,7 +42,11 @@ func (Self *Config) set(configs map[string]any) error {
 			Value: v,
 		})
 	}
-	mysqlClient, err := Self.Storage.GetMysqlClient()
+	storageModule, err := GetStorage()
+	if err != nil {
+		return err
+	}
+	mysqlClient, err := storageModule.GetMysqlClient()
 	if err != nil {
 		return err
 	}
@@ -126,7 +128,11 @@ func (Self *Config) SetApi(ctx *gin.Context) {
 // @return	_		*Configs	配置
 // @return	_		error		异常信息
 func (Self *Config) load() (*Configs, error) {
-	mysqlClient, err := Self.Storage.GetMysqlClient()
+	storageModule, err := GetStorage()
+	if err != nil {
+		return nil, err
+	}
+	mysqlClient, err := storageModule.GetMysqlClient()
 	if err != nil {
 		return nil, err
 	}

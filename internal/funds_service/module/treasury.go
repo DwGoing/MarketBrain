@@ -21,9 +21,6 @@ import (
 // +ioc:autowire:type=normal
 type Treasury struct {
 	treasury_generated.UnimplementedTreasuryServer
-
-	Storage *Storage `normal:""`
-	Config  *Config  `normal:""`
 }
 
 // @title	创建充值订单
@@ -55,7 +52,11 @@ func (Self *Treasury) createRechargeOrder(
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	config, err := Self.Config.Load()
+	configModule, err := GetConfig()
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	config, err := configModule.Load()
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -74,7 +75,11 @@ func (Self *Treasury) createRechargeOrder(
 	default:
 		return "", time.Time{}, errors.New("unsupported chain")
 	}
-	mysqlClient, err := Self.Storage.GetMysqlClient()
+	storageModule, err := GetStorage()
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	mysqlClient, err := storageModule.GetMysqlClient()
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -172,7 +177,11 @@ func (Self *Treasury) submitRechargeOrderTransaction(orderId string, txHash stri
 		strings.TrimSpace(txHash) == "" {
 		return errors.New("parameter invaild")
 	}
-	mysqlClient, err := Self.Storage.GetMysqlClient()
+	storageModule, err := GetStorage()
+	if err != nil {
+		return err
+	}
+	mysqlClient, err := storageModule.GetMysqlClient()
 	if err != nil {
 		return err
 	}
@@ -266,8 +275,11 @@ func (Self *Treasury) CheckRechargeOrderStatus() error {
 			})
 		}
 	}
-
-	redisClient, err := Self.Storage.GetRedisClient()
+	storageModule, err := GetStorage()
+	if err != nil {
+		return err
+	}
+	redisClient, err := storageModule.GetRedisClient()
 	if err != nil {
 		return err
 	}
@@ -283,7 +295,7 @@ func (Self *Treasury) CheckRechargeOrderStatus() error {
 	}
 	// 解锁
 	defer redisClient.Del(context.Background(), lock).Result()
-	mysqlClient, err := Self.Storage.GetMysqlClient()
+	mysqlClient, err := storageModule.GetMysqlClient()
 	if err != nil {
 		return err
 	}
@@ -300,7 +312,11 @@ func (Self *Treasury) CheckRechargeOrderStatus() error {
 	if err != nil {
 		return err
 	}
-	config, err := Self.Config.load()
+	configModule, err := GetConfig()
+	if err != nil {
+		return err
+	}
+	config, err := configModule.load()
 	if err != nil {
 		return err
 	}
