@@ -27,7 +27,9 @@ type Configs struct {
 }
 
 type ChainConfig struct {
-	Nodes []string `json:"nodes"`
+	USDT   string   `json:"usdt"`
+	Nodes  []string `json:"nodes"`
+	ApiKey string   `json:"apiKey"`
 }
 
 // @title	更新配置
