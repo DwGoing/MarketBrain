@@ -602,7 +602,7 @@ func CheckRechargeOrderStatusApi(ctx *gin.Context) {
 	}, nil
 }
 
-type CreateRechargeOrderApiRequest struct {
+type CreateRechargeOrderRequest struct {
 	ExternalIdentity string  `json:"externalIdentity"`
 	ExternalData     []byte  `json:"externalData"`
 	CallbackUrl      string  `json:"callbackUrl"`
@@ -611,16 +611,16 @@ type CreateRechargeOrderApiRequest struct {
 	WalletIndex      int64   `json:"walletIndex"`
 }
 
-type CreateRechargeOrderApiResponse struct {
+type CreateRechargeOrderResponse struct {
 	OrderId  string    `json:"orderId"`
 	ExpireAt time.Time `json:"expireAt"`
 }
 
 // @title	创建充值订单
-// @param	Self	*Treasury		服务实例
+// @param	Self	*Treasury		模块实例
 // @param	ctx		*gin.Context	上下文
 func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
-	var request CreateRechargeOrderApiRequest
+	var request CreateRechargeOrderRequest
 	err := ctx.ShouldBind(&request)
 	if err != nil {
 		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
@@ -636,14 +636,14 @@ func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
 	if err != nil {
 		Response.Fail(ctx, enum.ApiErrorType_ServiceError, err)
 	}
-	Response.Success(ctx, CreateRechargeOrderApiResponse{
+	Response.Success(ctx, CreateRechargeOrderResponse{
 		OrderId:  orderId,
 		ExpireAt: expireAt,
 	})
 }
 
 // @title	检查充值订单状态
-// @param	Self	*Treasury	服务实例
+// @param	Self	*Treasury	模块实例
 // @return	_		error		异常信息
 func (Self *Treasury) CheckRechargeOrderStatus() error {
 	zap.S().Errorf("check recharge order error: %s", "xxxxxxx")
