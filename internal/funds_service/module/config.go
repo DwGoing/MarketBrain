@@ -2,13 +2,29 @@ package module
 
 import (
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module/config_generated"
 	"github.com/ahmetb/go-linq"
 	"github.com/mitchellh/mapstructure"
 )
 
 // +ioc:autowire=true
 // +ioc:autowire:type=normal
-type Config struct{}
+type Config struct {
+	config_generated.UnimplementedConfigServer
+
+	Storage *Storage `normal:""`
+}
+
+type Configs struct {
+	Mnemonic     string                 `mapstructure:"MNEMONIC" json:"mnemonic"`
+	ChainConfigs map[string]ChainConfig `mapstructure:"CHAIN_CONFIGS" json:"chainConfigs"`
+}
+
+type ChainConfig struct {
+	USDT   string   `json:"usdt"`
+	Nodes  []string `json:"nodes"`
+	ApiKey string   `json:"apiKey"`
+}
 
 // @title	更新配置
 // @param	Self	*Config		模块实例
@@ -22,8 +38,7 @@ func (Self *Config) Set(configs map[string]any) error {
 			Value: v,
 		})
 	}
-	storageModule, _ := GetStorage()
-	mysqlClient, err := storageModule.GetMysqlClient()
+	mysqlClient, err := Self.Storage.GetMysqlClient()
 	if err != nil {
 		return err
 	}
@@ -43,9 +58,8 @@ func (Self *Config) Set(configs map[string]any) error {
 // @param	Self	*Config		模块实例
 // @return	_		*Configs	配置
 // @return	_		error		异常信息
-func (Self *Config) Load() (*model.Configs, error) {
-	storageModule, _ := GetStorage()
-	mysqlClient, err := storageModule.GetMysqlClient()
+func (Self *Config) load() (*Configs, error) {
+	mysqlClient, err := Self.Storage.GetMysqlClient()
 	if err != nil {
 		return nil, err
 	}
