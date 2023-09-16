@@ -332,7 +332,7 @@ func (Self *Treasury) CheckRechargeOrderStatus() error {
 		}
 		// 检查交易状态
 		if strings.TrimSpace(rechargeOrder.TxHash) != "" {
-			result, address, time, to, amount, confirms, err := chain.DecodeTransaction(chainType, rechargeOrder.TxHash)
+			result, address, timeStamp, to, amount, confirms, err := chain.DecodeTransaction(chainType, rechargeOrder.TxHash)
 			if err != nil {
 				zap.S().Errorf("decode transaction error: %s", err)
 				// 检查是否过期
@@ -341,7 +341,7 @@ func (Self *Treasury) CheckRechargeOrderStatus() error {
 			}
 			if !result ||
 				address != chainConfig.USDT ||
-				time < rechargeOrder.CreatedAt.UTC().UnixMilli() ||
+				timeStamp < rechargeOrder.CreatedAt.UTC().UnixMilli() ||
 				to != rechargeOrder.Wallet ||
 				amount < rechargeOrder.Amount {
 				model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
@@ -355,11 +355,24 @@ func (Self *Treasury) CheckRechargeOrderStatus() error {
 			if confirms < 8 {
 				continue
 			}
+			// 发起回调
+			for retry := 0; retry < 5; retry++ {
+				time.Sleep(time.Minute * time.Duration(retry))
+				notifyModule, err := GetNotify()
+				if err != nil {
+					return err
+				}
+				err = notifyModule.Send(rechargeOrder.CallbackUrl, rechargeOrder.ExternalData)
+				if err != nil {
+					zap.S().Errorf("notify error: %s", err)
+				} else {
+					break
+				}
+			}
 		} else {
 			// 检查是否过期
 			checkExpireTime(mysqlClient, rechargeOrder)
 		}
-
 	}
 	return nil
 }

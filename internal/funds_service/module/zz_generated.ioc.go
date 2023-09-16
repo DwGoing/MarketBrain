@@ -73,6 +73,21 @@ func init() {
 	singleton.RegisterStructDescriptor(eventBusStructDescriptor)
 	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
 		Factory: func() interface{} {
+			return &notify_{}
+		},
+	})
+	notifyStructDescriptor := &autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &Notify{}
+		},
+		Metadata: map[string]interface{}{
+			"aop":      map[string]interface{}{},
+			"autowire": map[string]interface{}{},
+		},
+	}
+	normal.RegisterStructDescriptor(notifyStructDescriptor)
+	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
+		Factory: func() interface{} {
 			return &storage_{}
 		},
 	})
@@ -143,6 +158,14 @@ func (c *config_) LoadApi(ctx *gin.Context) {
 type eventBus_ struct {
 }
 
+type notify_ struct {
+	Send_ func(url string, data any) error
+}
+
+func (n *notify_) Send(url string, data any) error {
+	return n.Send_(url, data)
+}
+
 type storage_ struct {
 	GetRedisClient_ func() (*v9.Client, error)
 	GetMysqlClient_ func() (*gorm.DB, error)
@@ -197,6 +220,10 @@ type ConfigIOCInterface interface {
 }
 
 type EventBusIOCInterface interface {
+}
+
+type NotifyIOCInterface interface {
+	Send(url string, data any) error
 }
 
 type StorageIOCInterface interface {
@@ -296,6 +323,32 @@ type ThisEventBus struct {
 func (t *ThisEventBus) This() EventBusIOCInterface {
 	thisPtr, _ := GetEventBusIOCInterfaceSingleton()
 	return thisPtr
+}
+
+var _notifySDID string
+
+func GetNotify() (*Notify, error) {
+	if _notifySDID == "" {
+		_notifySDID = util.GetSDIDByStructPtr(new(Notify))
+	}
+	i, err := normal.GetImpl(_notifySDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(*Notify)
+	return impl, nil
+}
+
+func GetNotifyIOCInterface() (NotifyIOCInterface, error) {
+	if _notifySDID == "" {
+		_notifySDID = util.GetSDIDByStructPtr(new(Notify))
+	}
+	i, err := normal.GetImplWithProxy(_notifySDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(NotifyIOCInterface)
+	return impl, nil
 }
 
 var _storageSDID string
