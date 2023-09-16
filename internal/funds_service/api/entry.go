@@ -30,4 +30,5 @@ func TreasuryRpc() *module.Treasury {
 func TreasuryApi(router *gin.RouterGroup) {
 	treasury, _ := module.GetTreasury()
 	router.POST("createRechargeOrder", treasury.CreateRechargeOrderApi)
+	router.POST("submitRechargeOrderTransaction", treasury.SubmitRechargeOrderTransactionApi)
 }

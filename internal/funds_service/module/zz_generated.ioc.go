@@ -9,6 +9,7 @@ import (
 	contextx "context"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/module/config_generated"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
+	"github.com/DwGoing/MarketBrain/pkg/enum"
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	singleton "github.com/alibaba/ioc-golang/autowire/singleton"
@@ -104,25 +105,35 @@ func init() {
 
 type EventBusConstructFunc func(impl *EventBus) (*EventBus, error)
 type chain_ struct {
+	DecodeTransaction_ func(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error)
+}
+
+func (c *chain_) DecodeTransaction(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error) {
+	return c.DecodeTransaction_(chainType, txHash)
 }
 
 type config_ struct {
-	Set_     func(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
+	SetRpc_  func(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
 	SetApi_  func(ctx *gin.Context)
-	Load_    func(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
+	Load_    func() (*Configs, error)
+	LoadRpc_ func(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
 	LoadApi_ func(ctx *gin.Context)
 }
 
-func (c *config_) Set(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error) {
-	return c.Set_(ctx, request)
+func (c *config_) SetRpc(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error) {
+	return c.SetRpc_(ctx, request)
 }
 
 func (c *config_) SetApi(ctx *gin.Context) {
 	c.SetApi_(ctx)
 }
 
-func (c *config_) Load(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error) {
-	return c.Load_(ctx, request)
+func (c *config_) Load() (*Configs, error) {
+	return c.Load_()
+}
+
+func (c *config_) LoadRpc(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error) {
+	return c.LoadRpc_(ctx, request)
 }
 
 func (c *config_) LoadApi(ctx *gin.Context) {
@@ -146,25 +157,42 @@ func (s *storage_) GetMysqlClient() (*gorm.DB, error) {
 }
 
 type treasury_ struct {
-	CreateRechargeOrder_    func(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
-	CreateRechargeOrderApi_ func(ctx *gin.Context)
+	CreateRechargeOrderRpc_            func(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
+	CreateRechargeOrderApi_            func(ctx *gin.Context)
+	SubmitRechargeOrderTransactionRpc_ func(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
+	SubmitRechargeOrderTransactionApi_ func(ctx *gin.Context)
+	CheckRechargeOrderStatus_          func() error
 }
 
-func (t *treasury_) CreateRechargeOrder(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error) {
-	return t.CreateRechargeOrder_(ctx, request)
+func (t *treasury_) CreateRechargeOrderRpc(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error) {
+	return t.CreateRechargeOrderRpc_(ctx, request)
 }
 
 func (t *treasury_) CreateRechargeOrderApi(ctx *gin.Context) {
 	t.CreateRechargeOrderApi_(ctx)
 }
 
+func (t *treasury_) SubmitRechargeOrderTransactionRpc(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error) {
+	return t.SubmitRechargeOrderTransactionRpc_(ctx, request)
+}
+
+func (t *treasury_) SubmitRechargeOrderTransactionApi(ctx *gin.Context) {
+	t.SubmitRechargeOrderTransactionApi_(ctx)
+}
+
+func (t *treasury_) CheckRechargeOrderStatus() error {
+	return t.CheckRechargeOrderStatus_()
+}
+
 type ChainIOCInterface interface {
+	DecodeTransaction(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error)
 }
 
 type ConfigIOCInterface interface {
-	Set(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
+	SetRpc(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
 	SetApi(ctx *gin.Context)
-	Load(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
+	Load() (*Configs, error)
+	LoadRpc(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
 	LoadApi(ctx *gin.Context)
 }
 
@@ -177,8 +205,11 @@ type StorageIOCInterface interface {
 }
 
 type TreasuryIOCInterface interface {
-	CreateRechargeOrder(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
+	CreateRechargeOrderRpc(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
 	CreateRechargeOrderApi(ctx *gin.Context)
+	SubmitRechargeOrderTransactionRpc(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
+	SubmitRechargeOrderTransactionApi(ctx *gin.Context)
+	CheckRechargeOrderStatus() error
 }
 
 var _chainSDID string

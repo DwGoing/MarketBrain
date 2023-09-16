@@ -2,8 +2,11 @@ syntax = "proto3";
 
 option go_package = "./;treasury_generated";
 
+import "google/protobuf/empty.proto";
+
 service Treasury {
     rpc CreateRechargeOrderRpc (CreateRechargeOrderRequest) returns (CreateRechargeOrderResponse);
+    rpc SubmitRechargeOrderTransactionRpc (SubmitRechargeOrderTransactionRequest) returns (google.protobuf.Empty);
 }
 
 message CreateRechargeOrderRequest {
@@ -18,4 +21,9 @@ message CreateRechargeOrderRequest {
 message CreateRechargeOrderResponse {
     string orderId = 1;
     string expireAt = 2;
+}
+
+message SubmitRechargeOrderTransactionRequest {
+    string orderId = 1;
+    string txHash = 2;
 }
