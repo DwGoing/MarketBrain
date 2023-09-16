@@ -201,6 +201,17 @@ func (Self *Treasury) submitRechargeOrderTransaction(orderId string, txHash stri
 	if total < 1 {
 		return errors.New("order not existed")
 	}
+	// 检查TxHash
+	_, total, err = model.GetRechargeOrderRecords(mysqlClient, model.GetOption{
+		Conditions:           "`TX_HASH` = ?",
+		ConditionsParameters: []any{txHash},
+	})
+	if err != nil {
+		return err
+	}
+	if total > 0 {
+		return errors.New("tx hash existed")
+	}
 	rechargeOrder := rechargeOrders[0]
 	status, _ := new(enum.RechargeStatus).Parse(rechargeOrder.Status)
 	if status == enum.RechargeStatus_PAID {
