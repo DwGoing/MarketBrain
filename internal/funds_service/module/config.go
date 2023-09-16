@@ -87,7 +87,7 @@ func (Self *Config) SetRpc(ctx context.Context, request *config_generated.SetReq
 	return &emptypb.Empty{}, nil
 }
 
-type SetApiRequest struct {
+type SetRequest struct {
 	Mnemonic     *string                `json:"mnemonic"`
 	ChainConfigs map[string]ChainConfig `json:"chainConfigs"`
 }
@@ -96,7 +96,7 @@ type SetApiRequest struct {
 // @param	Self	*Config			服务实例
 // @param	ctx		*gin.Context	上下文
 func (Self *Config) SetApi(ctx *gin.Context) {
-	var request SetApiRequest
+	var request SetRequest
 	err := ctx.ShouldBind(&request)
 	if err != nil {
 		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
