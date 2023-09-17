@@ -6,18 +6,16 @@
 package module
 
 import (
-	contextx "context"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/module/config_generated"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
+	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	singleton "github.com/alibaba/ioc-golang/autowire/singleton"
 	util "github.com/alibaba/ioc-golang/autowire/util"
-	"github.com/gin-gonic/gin"
 	v9 "github.com/redis/go-redis/v9"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"gorm.io/gorm"
+	timex "time"
 )
 
 func init() {
@@ -120,49 +118,44 @@ func init() {
 
 type EventBusConstructFunc func(impl *EventBus) (*EventBus, error)
 type chain_ struct {
+	GetAccount_        func(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
 	DecodeTransaction_ func(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error)
+	GetBalance_        func(chainType enum.ChainType, wallet string) (float64, error)
+}
+
+func (c *chain_) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
+	return c.GetAccount_(currencyType, index)
 }
 
 func (c *chain_) DecodeTransaction(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error) {
 	return c.DecodeTransaction_(chainType, txHash)
 }
 
+func (c *chain_) GetBalance(chainType enum.ChainType, wallet string) (float64, error) {
+	return c.GetBalance_(chainType, wallet)
+}
+
 type config_ struct {
-	SetRpc_  func(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
-	SetApi_  func(ctx *gin.Context)
-	Load_    func() (*Configs, error)
-	LoadRpc_ func(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
-	LoadApi_ func(ctx *gin.Context)
+	Set_  func(configs map[string]any) error
+	Load_ func() (*model.Configs, error)
 }
 
-func (c *config_) SetRpc(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error) {
-	return c.SetRpc_(ctx, request)
+func (c *config_) Set(configs map[string]any) error {
+	return c.Set_(configs)
 }
 
-func (c *config_) SetApi(ctx *gin.Context) {
-	c.SetApi_(ctx)
-}
-
-func (c *config_) Load() (*Configs, error) {
+func (c *config_) Load() (*model.Configs, error) {
 	return c.Load_()
-}
-
-func (c *config_) LoadRpc(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error) {
-	return c.LoadRpc_(ctx, request)
-}
-
-func (c *config_) LoadApi(ctx *gin.Context) {
-	c.LoadApi_(ctx)
 }
 
 type eventBus_ struct {
 }
 
 type notify_ struct {
-	Send_ func(url string, data any) error
+	Send_ func(url string, data []byte) error
 }
 
-func (n *notify_) Send(url string, data any) error {
+func (n *notify_) Send(url string, data []byte) error {
 	return n.Send_(url, data)
 }
 
@@ -180,50 +173,39 @@ func (s *storage_) GetMysqlClient() (*gorm.DB, error) {
 }
 
 type treasury_ struct {
-	CreateRechargeOrderRpc_            func(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
-	CreateRechargeOrderApi_            func(ctx *gin.Context)
-	SubmitRechargeOrderTransactionRpc_ func(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
-	SubmitRechargeOrderTransactionApi_ func(ctx *gin.Context)
-	CheckRechargeOrderStatus_          func() error
+	CreateRechargeOrder_            func(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
+	SubmitRechargeOrderTransaction_ func(orderId string, txHash string) error
+	CheckRechargeOrderStatus_       func() (map[int64]string, error)
 }
 
-func (t *treasury_) CreateRechargeOrderRpc(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error) {
-	return t.CreateRechargeOrderRpc_(ctx, request)
+func (t *treasury_) CreateRechargeOrder(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error) {
+	return t.CreateRechargeOrder_(externalIdentity, externalData, callbackUrl, chainType, amount, walletIndex)
 }
 
-func (t *treasury_) CreateRechargeOrderApi(ctx *gin.Context) {
-	t.CreateRechargeOrderApi_(ctx)
+func (t *treasury_) SubmitRechargeOrderTransaction(orderId string, txHash string) error {
+	return t.SubmitRechargeOrderTransaction_(orderId, txHash)
 }
 
-func (t *treasury_) SubmitRechargeOrderTransactionRpc(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error) {
-	return t.SubmitRechargeOrderTransactionRpc_(ctx, request)
-}
-
-func (t *treasury_) SubmitRechargeOrderTransactionApi(ctx *gin.Context) {
-	t.SubmitRechargeOrderTransactionApi_(ctx)
-}
-
-func (t *treasury_) CheckRechargeOrderStatus() error {
+func (t *treasury_) CheckRechargeOrderStatus() (map[int64]string, error) {
 	return t.CheckRechargeOrderStatus_()
 }
 
 type ChainIOCInterface interface {
+	GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
 	DecodeTransaction(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error)
+	GetBalance(chainType enum.ChainType, wallet string) (float64, error)
 }
 
 type ConfigIOCInterface interface {
-	SetRpc(ctx contextx.Context, request *config_generated.SetRequest) (*emptypb.Empty, error)
-	SetApi(ctx *gin.Context)
-	Load() (*Configs, error)
-	LoadRpc(ctx contextx.Context, request *emptypb.Empty) (*config_generated.LoadResponse, error)
-	LoadApi(ctx *gin.Context)
+	Set(configs map[string]any) error
+	Load() (*model.Configs, error)
 }
 
 type EventBusIOCInterface interface {
 }
 
 type NotifyIOCInterface interface {
-	Send(url string, data any) error
+	Send(url string, data []byte) error
 }
 
 type StorageIOCInterface interface {
@@ -232,11 +214,9 @@ type StorageIOCInterface interface {
 }
 
 type TreasuryIOCInterface interface {
-	CreateRechargeOrderRpc(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
-	CreateRechargeOrderApi(ctx *gin.Context)
-	SubmitRechargeOrderTransactionRpc(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
-	SubmitRechargeOrderTransactionApi(ctx *gin.Context)
-	CheckRechargeOrderStatus() error
+	CreateRechargeOrder(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
+	SubmitRechargeOrderTransaction(orderId string, txHash string) error
+	CheckRechargeOrderStatus() (map[int64]string, error)
 }
 
 var _chainSDID string

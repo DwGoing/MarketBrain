@@ -17,7 +17,8 @@ type RechargeOrderRecord struct {
 	CallbackUrl      string    `gorm:"column:CALLBACK_URL" mapstructure:"CALLBACK_URL"`
 	ChainType        string    `gorm:"column:CHAIN_TYPE" mapstructure:"CHAIN_TYPE"`
 	Amount           float64   `gorm:"column:AMOUNT" mapstructure:"AMOUNT"`
-	Wallet           string    `gorm:"column:WALLET" mapstructure:"WALLET"`
+	WalletIndex      int64     `gorm:"column:WALLET_INDEX" mapstructure:"WALLET_INDEX"`
+	WalletAddress    string    `gorm:"column:WALLET_ADDRESS" mapstructure:"WALLET_ADDRESS"`
 	Status           string    `gorm:"column:STATUS" mapstructure:"STATUS"`
 	ExpireAt         time.Time `gorm:"column:EXPIRE_AT" mapstructure:"EXPIRE_AT"`
 	TxHash           string    `gorm:"column:TX_HASH" mapstructure:"TX_HASH"`
