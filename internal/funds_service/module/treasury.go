@@ -32,6 +32,7 @@ type Treasury struct {
 // @param	amount				float64			充值数量
 // @param	walletIndex			int64			钱包索引
 // @return	_					string			订单ID
+// @return	_					string			接收钱包
 // @return	_					error			异常信息
 func (Self *Treasury) createRechargeOrder(
 	externalIdentity string,
@@ -40,52 +41,52 @@ func (Self *Treasury) createRechargeOrder(
 	chainType string,
 	amount float64,
 	walletIndex int64,
-) (string, time.Time, error) {
+) (string, string, time.Time, error) {
 	if strings.TrimSpace(externalIdentity) == "" ||
 		strings.TrimSpace(callbackUrl) == "" ||
 		strings.TrimSpace(chainType) == "" ||
 		amount < 1 ||
 		walletIndex < 1 {
-		return "", time.Time{}, errors.New("parameter invaild")
+		return "", "", time.Time{}, errors.New("parameter invaild")
 	}
 	chain, err := new(enum.ChainType).Parse(chainType)
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 	configModule, err := GetConfig()
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 	config, err := configModule.Load()
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 	hdWallet, err := hd_wallet.FromMnemonic(config.Mnemonic, "")
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 	var wallet string
 	switch chain {
 	case enum.ChainType_TRON:
 		account, err := hdWallet.GetAccount(hd_wallet.Currency_TRON, walletIndex)
 		if err != nil {
-			return "", time.Time{}, err
+			return "", "", time.Time{}, err
 		}
 		wallet = account.GetAddress()
 	default:
-		return "", time.Time{}, errors.New("unsupported chain")
+		return "", "", time.Time{}, errors.New("unsupported chain")
 	}
 	storageModule, err := GetStorage()
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 	mysqlClient, err := storageModule.GetMysqlClient()
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 	db, err := mysqlClient.DB()
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 	defer db.Close()
 	record := &model.RechargeOrderRecord{
@@ -95,13 +96,13 @@ func (Self *Treasury) createRechargeOrder(
 		ChainType:        chainType,
 		Amount:           amount,
 		Wallet:           wallet,
-		ExpireAt:         time.Now(),
+		ExpireAt:         time.Now().Add(time.Minute * 30),
 	}
 	record, err = model.CreateRechargeOrderRecord(mysqlClient, record)
 	if err != nil {
-		return "", time.Time{}, err
+		return "", wallet, time.Time{}, err
 	}
-	return record.Id, record.ExpireAt, nil
+	return record.Id, record.Wallet, record.ExpireAt, nil
 }
 
 // @title	创建充值订单
@@ -111,7 +112,7 @@ func (Self *Treasury) createRechargeOrder(
 // @return	_			*treasury_generated.CreateRechargeOrderResponse	响应体
 // @return	_			error											异常信息
 func (Self *Treasury) CreateRechargeOrderRpc(ctx context.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error) {
-	orderId, expireAt, err := Self.createRechargeOrder(
+	orderId, wallet, expireAt, err := Self.createRechargeOrder(
 		request.ExternalIdentity,
 		request.ExternalData,
 		request.CallbackUrl,
@@ -124,6 +125,7 @@ func (Self *Treasury) CreateRechargeOrderRpc(ctx context.Context, request *treas
 	}
 	return &treasury_generated.CreateRechargeOrderResponse{
 		OrderId:  orderId,
+		Wallet:   wallet,
 		ExpireAt: expireAt.String(),
 	}, nil
 }
@@ -139,6 +141,7 @@ type CreateRechargeOrderRequest struct {
 
 type CreateRechargeOrderResponse struct {
 	OrderId  string    `json:"orderId"`
+	Wallet   string    `json:"wallet"`
 	ExpireAt time.Time `json:"expireAt"`
 }
 
@@ -151,7 +154,7 @@ func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
 	if err != nil {
 		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
 	}
-	orderId, expireAt, err := Self.createRechargeOrder(
+	orderId, wallet, expireAt, err := Self.createRechargeOrder(
 		request.ExternalIdentity,
 		request.ExternalData,
 		request.CallbackUrl,
@@ -164,6 +167,7 @@ func (Self *Treasury) CreateRechargeOrderApi(ctx *gin.Context) {
 	}
 	Response.Success(ctx, CreateRechargeOrderResponse{
 		OrderId:  orderId,
+		Wallet:   wallet,
 		ExpireAt: expireAt,
 	})
 }
@@ -362,10 +366,19 @@ func (Self *Treasury) CheckRechargeOrderStatus() error {
 						"STATUS": enum.RechargeStatus_CANCELLED.String(),
 					},
 				})
+				continue
 			}
 			if confirms < 8 {
 				continue
 			}
+			// 确认订单
+			model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
+				Conditions:           "`ID` = ?",
+				ConditionsParameters: []any{rechargeOrder.Id},
+				Values: map[string]any{
+					"STATUS": enum.RechargeStatus_PAID.String(),
+				},
+			})
 			// 发起回调
 			for retry := 0; retry < 5; retry++ {
 				time.Sleep(time.Minute * time.Duration(retry))

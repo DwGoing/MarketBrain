@@ -12,15 +12,15 @@ import (
 
 type RechargeOrderRecord struct {
 	Record
-	ExternalIdentity string    `gorm:"column:EXTERNAL_IDENTITY"`
-	ExternalData     []byte    `gorm:"column:EXTERNAL_DATA"`
-	CallbackUrl      string    `gorm:"column:CALLBACK_URL"`
-	ChainType        string    `gorm:"column:CHAIN_TYPE"`
-	Amount           float64   `gorm:"column:AMOUNT"`
-	Wallet           string    `gorm:"column:WALLET"`
-	Status           string    `gorm:"column:STATUS"`
-	ExpireAt         time.Time `gorm:"column:EXPIRE_AT"`
-	TxHash           string    `gorm:"column:TX_HASH"`
+	ExternalIdentity string    `gorm:"column:EXTERNAL_IDENTITY" mapstructure:"EXTERNAL_IDENTITY"`
+	ExternalData     []byte    `gorm:"column:EXTERNAL_DATA" mapstructure:"EXTERNAL_DATA"`
+	CallbackUrl      string    `gorm:"column:CALLBACK_URL" mapstructure:"CALLBACK_URL"`
+	ChainType        string    `gorm:"column:CHAIN_TYPE" mapstructure:"CHAIN_TYPE"`
+	Amount           float64   `gorm:"column:AMOUNT" mapstructure:"AMOUNT"`
+	Wallet           string    `gorm:"column:WALLET" mapstructure:"WALLET"`
+	Status           string    `gorm:"column:STATUS" mapstructure:"STATUS"`
+	ExpireAt         time.Time `gorm:"column:EXPIRE_AT" mapstructure:"EXPIRE_AT"`
+	TxHash           string    `gorm:"column:TX_HASH" mapstructure:"TX_HASH"`
 }
 
 func CreateRechargeOrderRecord(client *gorm.DB, record *RechargeOrderRecord) (*RechargeOrderRecord, error) {
