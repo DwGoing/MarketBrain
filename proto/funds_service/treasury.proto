@@ -20,7 +20,8 @@ message CreateRechargeOrderRequest {
 
 message CreateRechargeOrderResponse {
     string orderId = 1;
-    string expireAt = 2;
+    string wallet = 2;
+    string expireAt = 3;
 }
 
 message SubmitRechargeOrderTransactionRequest {
