@@ -59,6 +59,10 @@ func TreasuryRpc() *module.Treasury {
 // @param	router	*gin.RouterGroup	路由
 func TreasuryApi(router *gin.RouterGroup) {
 	treasury, _ := module.GetTreasury()
+	router.POST("test", func(ctx *gin.Context) {
+		zap.S().Warnf("Notify ===> ok")
+		Response.Success(ctx, nil)
+	})
 	router.POST("createRechargeOrder", treasury.CreateRechargeOrderApi)
 	router.POST("submitRechargeOrderTransaction", treasury.SubmitRechargeOrderTransactionApi)
 }
