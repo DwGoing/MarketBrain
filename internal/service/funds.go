@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/api"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/api/config_generated"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/api/treasury_generated"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/module/config_generated"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/alibaba/ioc-golang/extension/config"
