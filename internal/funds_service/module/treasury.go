@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/module/treasury_generated"
-	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
 	"go.uber.org/zap"
