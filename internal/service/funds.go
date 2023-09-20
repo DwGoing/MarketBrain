@@ -51,6 +51,12 @@ func NewFunds(service *Funds) (*Funds, error) {
 	// 初始化Http
 	go func() {
 		engine := gin.Default()
+
+		engine.POST("test", func(ctx *gin.Context) {
+			zap.S().Warnf("Notify ===> ok")
+			Response.Success(ctx, nil)
+		})
+
 		// 验证RequestId
 		engine.Use(func(ctx *gin.Context) {
 			requestId, ok := ctx.GetQuery("requestId")

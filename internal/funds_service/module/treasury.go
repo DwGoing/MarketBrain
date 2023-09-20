@@ -147,10 +147,10 @@ func (Self *Treasury) SubmitRechargeOrderTransaction(orderId string, txHash stri
 }
 
 // @title	检查充值订单状态
-// @param	Self	*Treasury			模块实例
-// @return	_		map[int64]string	充值成功钱包
-// @return	_		error				异常信息
-func (Self *Treasury) CheckRechargeOrderStatus() (map[int64]string, error) {
+// @param	Self	*Treasury							模块实例
+// @return	_		[]model.WalletCollectionInfomation	待归集钱包
+// @return	_		error								异常信息
+func (Self *Treasury) CheckRechargeOrderStatus() ([]model.WalletCollectionInfomation, error) {
 	checkExpireTime := func(client *gorm.DB, order model.RechargeOrderRecord) {
 		// 检查过期时间
 		if order.ExpireAt.Before(time.Now()) {
@@ -190,7 +190,7 @@ func (Self *Treasury) CheckRechargeOrderStatus() (map[int64]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	wallets := make(map[int64]string)
+	wallets := []model.WalletCollectionInfomation{}
 	for _, rechargeOrder := range rechargeOrders {
 		chainType, _ := new(enum.ChainType).Parse(rechargeOrder.ChainType)
 		chainConfig, ok := config.ChainConfigs[chainType.String()]
@@ -199,7 +199,7 @@ func (Self *Treasury) CheckRechargeOrderStatus() (map[int64]string, error) {
 		}
 		// 检查交易状态
 		if strings.TrimSpace(rechargeOrder.TxHash) != "" {
-			result, address, timeStamp, to, amount, confirms, err := chain.DecodeTransaction(chainType, rechargeOrder.TxHash)
+			result, timeStamp, to, amount, confirms, err := chain.DecodeTransaction(chainType, &chainConfig.USDT, rechargeOrder.TxHash)
 			if err != nil {
 				zap.S().Errorf("decode transaction error: %s", err)
 				// 检查是否过期
@@ -207,8 +207,7 @@ func (Self *Treasury) CheckRechargeOrderStatus() (map[int64]string, error) {
 				continue
 			}
 			if !result ||
-				address != chainConfig.USDT ||
-				timeStamp < rechargeOrder.CreatedAt.UTC().UnixMilli() ||
+				timeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
 				to != rechargeOrder.WalletAddress ||
 				amount < rechargeOrder.Amount {
 				model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
@@ -223,8 +222,7 @@ func (Self *Treasury) CheckRechargeOrderStatus() (map[int64]string, error) {
 			if confirms < 8 {
 				continue
 			}
-			// 确认订单
-			wallets[rechargeOrder.WalletIndex] = rechargeOrder.WalletAddress
+			// 更新订单状态
 			model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
 				Conditions:           "`ID` = ?",
 				ConditionsParameters: []any{rechargeOrder.Id},
@@ -243,6 +241,12 @@ func (Self *Treasury) CheckRechargeOrderStatus() (map[int64]string, error) {
 					break
 				}
 			}
+			// 待归集
+			wallets = append(wallets, model.WalletCollectionInfomation{
+				Index:     rechargeOrder.WalletIndex,
+				ChainType: chainType,
+				Address:   rechargeOrder.WalletAddress,
+			})
 		} else {
 			// 检查是否过期
 			checkExpireTime(mysqlClient, rechargeOrder)
