@@ -1,30 +1,61 @@
 package module
 
 import (
+	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/sha256"
 	"errors"
+	"fmt"
+	"math"
 	"math/big"
+	"time"
 
+	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
+	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/fbsobreira/gotron-sdk/pkg/client"
-	tronCommon "github.com/fbsobreira/gotron-sdk/pkg/common"
+	"github.com/fbsobreira/gotron-sdk/pkg/common"
+	"github.com/fbsobreira/gotron-sdk/pkg/proto/api"
 	"github.com/fbsobreira/gotron-sdk/pkg/proto/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 )
 
 // +ioc:autowire=true
 // +ioc:autowire:type=normal
-type Chain struct {
-	Config *Config `normal:""`
+type Chain struct{}
+
+// @title	获取子钱包
+// @param	Self			*Chain				模块实例
+// @param	currencyType 	hd_wallet.Currency	币种类型
+// @param	index			int64				钱包索引
+// @return	_				*hd_wallet.Account	子钱包
+// @return	_				error				异常信息
+func (Self *Chain) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	hdWallet, err := hd_wallet.FromMnemonic(config.Mnemonic, "")
+	if err != nil {
+		return nil, err
+	}
+	account, err := hdWallet.GetAccount(currencyType, index)
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
 }
 
 // @title	获取Tron客户端
-// @param	Self	*Chain				模块实例
+// @param	Self		*Chain			模块实例
 // @param	config	*ChainConfig		链配置
 // @return	_		*client.GrpcClient	客户端
 // @return	_		error				异常信息
-func (Self *Chain) getTronClient(config ChainConfig) (*client.GrpcClient, error) {
+func (Self *Chain) getTronClient(config model.ChainConfig) (*client.GrpcClient, error) {
 	index, err := rand.Int(rand.Reader, big.NewInt(int64(len(config.Nodes))))
 	if err != nil {
 		return nil, err
@@ -41,63 +72,233 @@ func (Self *Chain) getTronClient(config ChainConfig) (*client.GrpcClient, error)
 	return grpcClient, nil
 }
 
+// @title	发送Tron交易
+// @param	Self		*Chain					模块实例
+// @param	client		*client.GrpcClient		客户端
+// @param	privateKey	*ecdsa.PrivateKey		私钥
+// @param	tx			*core.Transaction		交易
+// @param	waitReceipt	*client.GrpcClient		是否等待结果
+// @return	_			*core.TransactionInfo	交易信息
+// @return	_			error					异常信息
+func (Self *Chain) sendTronTransaction(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error) {
+	rawData, err := proto.Marshal(tx.GetRawData())
+	if err != nil {
+		return nil, err
+	}
+	h256h := sha256.New()
+	h256h.Write(rawData)
+	hash := h256h.Sum(nil)
+
+	signature, err := crypto.Sign(hash, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	tx.Signature = append(tx.Signature, signature)
+	result, err := client.Broadcast(tx)
+	if err != nil {
+		return nil, err
+	}
+	if result.Code != 0 {
+		return nil, fmt.Errorf("bad transaction: %v", string(result.GetMessage()))
+	}
+	var transaction *core.TransactionInfo
+	start := 0
+	for {
+		if start++; start > 10 {
+			return nil, errors.New("transaction info not found")
+		}
+		transaction, err = client.GetTransactionInfoByID(common.BytesToHexString(hash))
+		if err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+		if transaction.Result != 0 {
+			return nil, errors.New(string(transaction.ResMessage))
+		}
+		break
+	}
+	return transaction, err
+}
+
 // @title	解析交易
 // @param	Self		*Chain			模块实例
 // @param	chainType	enum.ChainType	链类型
+// @param	contract	*string			合约地址
 // @param	txHash		string			交易Hash
 // @return	_			bool			交易状态
-// @return	_			string			合约地址
 // @return	_			int64			时间戳
 // @return	_			string			收款地址
 // @return	_			float64			金额
 // @return	_			int64			确认数
 // @return	_			error			异常信息
-func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error) {
+func (Self *Chain) DecodeTransaction(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error) {
 	var (
 		result    bool
-		address   string
 		timeStamp int64
 		to        string
 		amount    float64
 		confirms  int64
 		err       error
 	)
-	config, err := Self.Config.Load()
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
 	if err != nil {
-		return result, address, timeStamp, to, amount, confirms, err
+		return result, timeStamp, to, amount, confirms, err
 	}
-	chainConfig, ok := config.ChainConfigs[enum.ChainType_TRON.String()]
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
 	if !ok || len(chainConfig.Nodes) < 1 {
-		err = errors.New("no chain config")
-		goto finish
+		return result, timeStamp, to, amount, confirms, errors.New("no chain config")
 	}
 	switch chainType {
 	case enum.ChainType_TRON:
 		client, err := Self.getTronClient(chainConfig)
 		if err != nil {
-			goto finish
+			return result, timeStamp, to, amount, confirms, err
 		}
 		tx, err := client.GetTransactionInfoByID(txHash)
 		if err != nil {
-			goto finish
+			return result, timeStamp, to, amount, confirms, err
 		}
-		result = tx.GetReceipt().GetResult() == core.Transaction_Result_SUCCESS
-		address = tronCommon.EncodeCheck(tx.GetContractAddress())
+		receiptResult := tx.GetReceipt().GetResult()
+		result = receiptResult == core.Transaction_Result_DEFAULT || receiptResult == core.Transaction_Result_SUCCESS
+		if !result {
+			return result, timeStamp, to, amount, confirms, err
+		}
 		timeStamp = tx.GetBlockTimeStamp()
+		if contract == nil {
+			txWithRawData, err := client.GetTransactionByID(txHash)
+			if err != nil {
+				return result, timeStamp, to, amount, confirms, err
+			}
+			var tc core.TransferContract
+			err = txWithRawData.RawData.GetContract()[0].GetParameter().UnmarshalTo(&tc)
+			if err != nil {
+				return result, timeStamp, to, amount, confirms, err
+			}
+			to = common.EncodeCheck(tc.GetToAddress())
+			amount, _ = new(big.Float).Quo(new(big.Float).SetInt64(tc.GetAmount()), big.NewFloat(1e6)).Float64()
+		} else {
+			if *contract != common.EncodeCheck(tx.GetContractAddress()) {
+				return result, timeStamp, to, amount, confirms, errors.New("contract not match")
+			}
+			log := tx.GetLog()[0]
+			if common.BytesToHexString(log.GetTopics()[0]) != common.BytesToHexString(common.Keccak256([]byte("Transfer(address,address,uint256)"))) {
+				return result, timeStamp, to, amount, confirms, errors.New("function not match")
+			}
+			to = common.EncodeCheck(append([]byte{0x41}, log.GetTopics()[2][12:]...))
+			decimalsBigInt, err := client.TRC20GetDecimals(*contract)
+			if err != nil {
+				return result, timeStamp, to, amount, confirms, err
+			}
+			amount, _ = new(big.Float).Quo(new(big.Float).SetInt(new(big.Int).SetBytes(log.Data)), big.NewFloat(math.Pow10(int(decimalsBigInt.Int64())))).Float64()
+		}
 		lastestBlock, err := client.GetNowBlock()
 		if err != nil {
-			goto finish
+			return result, timeStamp, to, amount, confirms, err
 		}
 		confirms = lastestBlock.BlockHeader.RawData.Number - tx.BlockNumber
-		log := tx.GetLog()[0]
-		if tronCommon.BytesToHexString(log.GetTopics()[0]) != tronCommon.BytesToHexString(tronCommon.Keccak256([]byte("Transfer(address,address,uint256)"))) {
-			return result, address, timeStamp, to, amount, confirms, errors.New("function not match")
-		}
-		to = tronCommon.EncodeCheck(append([]byte{0x41}, log.GetTopics()[2][12:]...))
-		amount = float64(new(big.Int).SetBytes(log.Data).Uint64()) / 1e6
 	default:
 		err = errors.New("unsupported chain type")
 	}
-finish:
-	return result, address, timeStamp, to, amount, confirms, err
+	return result, timeStamp, to, amount, confirms, err
+}
+
+// @title	获取钱包余额
+// @param	Self		*Chain			模块实例
+// @param	chainType	enum.ChainType	链类型
+// @param	contract	*string			合约地址
+// @param	wallet		string			钱包地址
+// @return	_			float64			余额
+// @return	_			error			异常信息
+func (Self *Chain) GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return 0, err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return 0, errors.New("no chain config")
+	}
+	var balance float64
+	switch chainType {
+	case enum.ChainType_TRON:
+		client, err := Self.getTronClient(chainConfig)
+		if err != nil {
+			return 0, err
+		}
+		if contract == nil {
+			account, err := client.GetAccount(wallet)
+			if err != nil {
+				return 0, err
+			}
+			balance, _ = new(big.Float).Quo(new(big.Float).SetInt64(account.Balance), big.NewFloat(1e6)).Float64()
+		} else {
+			balanceBigInt, err := client.TRC20ContractBalance(wallet, *contract)
+			if err != nil {
+				return 0, err
+			}
+			decimalsBigInt, err := client.TRC20GetDecimals(*contract)
+			if err != nil {
+				return 0, err
+			}
+			balance, _ = new(big.Float).Quo(new(big.Float).SetInt(balanceBigInt), big.NewFloat(math.Pow10(int(decimalsBigInt.Int64())))).Float64()
+		}
+	default:
+		return 0, errors.New("unsupported chain type")
+	}
+	return balance, nil
+}
+
+// @title	发送代币
+// @param	Self		*Chain				模块实例
+// @param	chainType	enum.ChainType		链类型
+// @param	contract	*string				合约地址
+// @param	from		*hd_wallet.Account	发送账户
+// @param	to			string				接收地址
+// @return	_			error				异常信息
+func (Self *Chain) Transfer(chainType enum.ChainType, contract *string, from *hd_wallet.Account, to string, amount float64) (string, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return "", err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return "", errors.New("no chain config")
+	}
+	var txHash string
+	switch chainType {
+	case enum.ChainType_TRON:
+		client, err := Self.getTronClient(chainConfig)
+		if err != nil {
+			return "", err
+		}
+		var tx *api.TransactionExtention
+		if contract == nil {
+			amountInt64, _ := new(big.Float).Mul(big.NewFloat(amount), big.NewFloat(1e6)).Int64()
+			tx, err = client.Transfer(from.GetAddress(), to, amountInt64)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			decimalsBigInt, err := client.TRC20GetDecimals(*contract)
+			if err != nil {
+				return "", err
+			}
+			amountBigInt, _ := new(big.Float).Mul(big.NewFloat(amount), big.NewFloat(math.Pow10(int(decimalsBigInt.Int64())))).Int(new(big.Int))
+			tx, err = client.TRC20Send(from.GetAddress(), to, *contract, amountBigInt, 300000000)
+			if err != nil {
+				return "", err
+			}
+		}
+		txInfo, err := Self.sendTronTransaction(client, from.PrivateKey.ToECDSA(), tx.Transaction, true)
+		if err != nil {
+			return "", err
+		}
+		txHash = common.Bytes2Hex(txInfo.GetId())
+	default:
+		return "", errors.New("unsupported chain type")
+	}
+	return txHash, nil
 }

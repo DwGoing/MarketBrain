@@ -119,20 +119,25 @@ func init() {
 type EventBusConstructFunc func(impl *EventBus) (*EventBus, error)
 type chain_ struct {
 	GetAccount_        func(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
-	DecodeTransaction_ func(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error)
-	GetBalance_        func(chainType enum.ChainType, wallet string) (float64, error)
+	DecodeTransaction_ func(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
+	GetBalance_        func(chainType enum.ChainType, contract *string, wallet string) (float64, error)
+	Transfer_          func(chainType enum.ChainType, contract *string, from *hd_wallet.Account, to string, amount float64) error
 }
 
 func (c *chain_) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
 	return c.GetAccount_(currencyType, index)
 }
 
-func (c *chain_) DecodeTransaction(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error) {
-	return c.DecodeTransaction_(chainType, txHash)
+func (c *chain_) DecodeTransaction(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error) {
+	return c.DecodeTransaction_(chainType, contract, txHash)
 }
 
-func (c *chain_) GetBalance(chainType enum.ChainType, wallet string) (float64, error) {
-	return c.GetBalance_(chainType, wallet)
+func (c *chain_) GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error) {
+	return c.GetBalance_(chainType, contract, wallet)
+}
+
+func (c *chain_) Transfer(chainType enum.ChainType, contract *string, from *hd_wallet.Account, to string, amount float64) error {
+	return c.Transfer_(chainType, contract, from, to, amount)
 }
 
 type config_ struct {
@@ -175,7 +180,7 @@ func (s *storage_) GetMysqlClient() (*gorm.DB, error) {
 type treasury_ struct {
 	CreateRechargeOrder_            func(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
 	SubmitRechargeOrderTransaction_ func(orderId string, txHash string) error
-	CheckRechargeOrderStatus_       func() (map[int64]string, error)
+	CheckRechargeOrderStatus_       func() ([]model.WalletCollectionInfomation, error)
 }
 
 func (t *treasury_) CreateRechargeOrder(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error) {
@@ -186,14 +191,15 @@ func (t *treasury_) SubmitRechargeOrderTransaction(orderId string, txHash string
 	return t.SubmitRechargeOrderTransaction_(orderId, txHash)
 }
 
-func (t *treasury_) CheckRechargeOrderStatus() (map[int64]string, error) {
+func (t *treasury_) CheckRechargeOrderStatus() ([]model.WalletCollectionInfomation, error) {
 	return t.CheckRechargeOrderStatus_()
 }
 
 type ChainIOCInterface interface {
 	GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
-	DecodeTransaction(chainType enum.ChainType, txHash string) (bool, string, int64, string, float64, int64, error)
-	GetBalance(chainType enum.ChainType, wallet string) (float64, error)
+	DecodeTransaction(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
+	GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error)
+	Transfer(chainType enum.ChainType, contract *string, from *hd_wallet.Account, to string, amount float64) error
 }
 
 type ConfigIOCInterface interface {
@@ -216,7 +222,7 @@ type StorageIOCInterface interface {
 type TreasuryIOCInterface interface {
 	CreateRechargeOrder(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
 	SubmitRechargeOrderTransaction(orderId string, txHash string) error
-	CheckRechargeOrderStatus() (map[int64]string, error)
+	CheckRechargeOrderStatus() ([]model.WalletCollectionInfomation, error)
 }
 
 var _chainSDID string
