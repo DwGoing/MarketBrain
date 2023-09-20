@@ -121,7 +121,7 @@ type chain_ struct {
 	GetAccount_        func(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
 	DecodeTransaction_ func(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
 	GetBalance_        func(chainType enum.ChainType, contract *string, wallet string) (float64, error)
-	Transfer_          func(chainType enum.ChainType, contract *string, from *hd_wallet.Account, to string, amount float64) error
+	Transfer_          func(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
 }
 
 func (c *chain_) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
@@ -136,8 +136,8 @@ func (c *chain_) GetBalance(chainType enum.ChainType, contract *string, wallet s
 	return c.GetBalance_(chainType, contract, wallet)
 }
 
-func (c *chain_) Transfer(chainType enum.ChainType, contract *string, from *hd_wallet.Account, to string, amount float64) error {
-	return c.Transfer_(chainType, contract, from, to, amount)
+func (c *chain_) Transfer(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error) {
+	return c.Transfer_(chainType, token, from, to, amount, remarks)
 }
 
 type config_ struct {
@@ -199,7 +199,7 @@ type ChainIOCInterface interface {
 	GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
 	DecodeTransaction(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
 	GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error)
-	Transfer(chainType enum.ChainType, contract *string, from *hd_wallet.Account, to string, amount float64) error
+	Transfer(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
 }
 
 type ConfigIOCInterface interface {

@@ -126,7 +126,7 @@ func (Self *EventBus) collectWallet() {
 				}
 				// 补充Gas
 				if gasBalance < config.MinGasThreshold {
-					_, err = chainModule.Transfer(enum.ChainType_TRON, nil, mainAccount, wallet.Address, config.TransferGasAmount)
+					_, err = chainModule.Transfer(enum.ChainType_TRON, nil, mainAccount, wallet.Address, config.TransferGasAmount, "补充Gas")
 					if err != nil {
 						zap.S().Errorf("transfer gas error: %s", err)
 						return
@@ -140,7 +140,7 @@ func (Self *EventBus) collectWallet() {
 				}
 				// 钱包归集
 				if balance >= config.WalletCollectionThreshold {
-					txHash, err := chainModule.Transfer(enum.ChainType_TRON, &chainConfig.USDT, account, mainAccount.GetAddress(), balance)
+					txHash, err := chainModule.Transfer(enum.ChainType_TRON, &chainConfig.USDT, account, mainAccount.GetAddress(), balance, "钱包归集")
 					if err != nil {
 						zap.S().Errorf("transfer usdt error: %s", err)
 						return

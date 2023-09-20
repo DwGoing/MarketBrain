@@ -123,6 +123,7 @@ func (Self *HDWallet) GetAccount(currency Currency, index int64) (*Account, erro
 		return nil, err
 	}
 	return &Account{
+		Index:      index,
 		Currency:   currency,
 		PrivateKey: btcecPrivateKey,
 	}, nil
