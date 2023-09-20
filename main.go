@@ -72,13 +72,13 @@ var serviceCommand = &cli.Command{
 		argv := ctx.Argv().(*serviceArgv)
 		serviceType, err := new(enum.ServiceType).Parse(argv.Type)
 		if err != nil {
-			return nil
+			return err
 		}
 		switch serviceType {
 		case enum.ServiceType_FUNDS:
 			err = startFundsService()
 			if err != nil {
-				return nil
+				return err
 			}
 		default:
 			return errors.New("unsupported service")
@@ -88,7 +88,7 @@ var serviceCommand = &cli.Command{
 		sig := make(chan os.Signal, 2)
 		signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
 		<-sig
-		zap.S().Infoln("process finished")
+		zap.S().Infof("process finished")
 		return nil
 	},
 }
@@ -112,7 +112,8 @@ func main() {
 	// 获取执行路径
 	executablePath, err := os.Executable()
 	if err != nil {
-		panic(err)
+		zap.S().Errorf("%s", err)
+		os.Exit(1)
 	}
 	executablePath = filepath.Dir(executablePath)
 	hook, err := rotatelogs.New(
@@ -121,7 +122,8 @@ func main() {
 		rotatelogs.WithRotationTime(time.Hour*24),
 	)
 	if err != nil {
-		panic(err)
+		zap.S().Errorf("%s", err)
+		os.Exit(1)
 	}
 	logger := zap.New(
 		zapcore.NewCore(
@@ -139,10 +141,9 @@ func main() {
 		cli.Tree(versionCommand),
 		cli.Tree(serviceCommand),
 	).Run(os.Args[1:]); err != nil {
-		zap.S().Fatalln(err)
+		zap.S().Errorf("%s", err)
 		os.Exit(1)
 	}
-
 }
 
 func startFundsService() error {
