@@ -5,26 +5,28 @@ option go_package = "./;treasury_generated";
 import "google/protobuf/empty.proto";
 
 service Treasury {
+    // 创建充值订单
     rpc CreateRechargeOrderRpc (CreateRechargeOrderRequest) returns (CreateRechargeOrderResponse);
+    // 提交充值交易
     rpc SubmitRechargeOrderTransactionRpc (SubmitRechargeOrderTransactionRequest) returns (google.protobuf.Empty);
 }
 
 message CreateRechargeOrderRequest {
-    string externalIdentity = 1;
-    optional bytes externalData = 2;
-    string callbackUrl = 3;
-    string chainType = 4;
-    double amount = 5;
-    int64 walletIndex = 6;
+    string externalIdentity = 1; // 外部标识（业务系统订单号）
+    optional bytes externalData = 2; // 外部数据 （回调时POST的body）
+    string callbackUrl = 3; // 回调地址
+    string chainType = 4; // 链类型 TRON
+    double amount = 5; // USDT数量
+    int64 walletIndex = 6; // HD钱包索引
 }
 
 message CreateRechargeOrderResponse {
-    string orderId = 1;
-    string wallet = 2;
-    string expireAt = 3;
+    string orderId = 1; // 订单号
+    string wallet = 2; // 充值钱包地址
+    string expireAt = 3; // 过期时间
 }
 
 message SubmitRechargeOrderTransactionRequest {
-    string orderId = 1;
-    string txHash = 2;
+    string orderId = 1; // 订单号
+    string txHash = 2; // 转账交易Hash
 }

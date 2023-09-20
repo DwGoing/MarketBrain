@@ -5,21 +5,23 @@ option go_package = "./;config_generated";
 import "google/protobuf/empty.proto";
 
 service Config {
+    // 更新配置
     rpc SetRpc (SetRequest) returns (google.protobuf.Empty) {}
+    // 加载配置
     rpc LoadRpc (google.protobuf.Empty) returns (LoadResponse) {}
 }
 
 message ChainConfig {
-    string usdt = 1;
-    repeated string nodes = 2;
+    string usdt = 1; // USDT合约地址
+    repeated string nodes = 2; // 节点URL
 }
 
 message SetRequest {
-    optional string mnemonic = 1;
-    map<string, ChainConfig> chainConfigs = 2;
+    optional string mnemonic = 1; // 助记词
+    map<string, ChainConfig> chainConfigs = 2; // 链相关配置
 }
 
 message LoadResponse {
-    string mnemonic = 1;
-    map<string, ChainConfig> chainConfigs = 2;
+    string mnemonic = 1; // 助记词
+    map<string, ChainConfig> chainConfigs = 2; // 链相关配置
 }
