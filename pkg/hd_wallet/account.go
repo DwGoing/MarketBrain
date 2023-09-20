@@ -10,6 +10,7 @@ import (
 )
 
 type Account struct {
+	Index      int64
 	Currency   Currency
 	PrivateKey *btcec.PrivateKey
 }

@@ -5,7 +5,10 @@ go 1.20
 require (
 	github.com/alibaba/ioc-golang v1.0.4
 	github.com/btcsuite/btcd v0.20.1-beta
+	github.com/fbsobreira/gotron-sdk v0.0.0-20230907131216-1e824406fe8c
+	github.com/gin-gonic/gin v1.8.1
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mkideal/cli v0.2.7
 	go.uber.org/zap v1.25.0
 	google.golang.org/grpc v1.48.0
@@ -34,11 +37,9 @@ require (
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/fbsobreira/gotron-sdk v0.0.0-20230907131216-1e824406fe8c // indirect
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.8.1 // indirect
 	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -101,7 +102,6 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/mkideal/expr v0.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
