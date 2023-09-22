@@ -73,6 +73,39 @@ func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
 	return height, nil
 }
 
+// @title	获取当前高度
+// @param	Self		*Chain			模块实例
+// @param	chainType	enum.ChainType	链类型
+// @return	_			int64			交易信息
+// @return	_			error			异常信息
+func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return 0, err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return 0, errors.New("no chain config")
+	}
+	var height int64
+	switch chainType {
+	case enum.ChainType_TRON:
+		client, err := Self.getTronClient(chainConfig)
+		if err != nil {
+			return 0, err
+		}
+		block, err := client.GetNowBlock()
+		if err != nil {
+			return 0, err
+		}
+		height = block.BlockHeader.RawData.Number
+	default:
+		return 0, errors.New("unsupported chain type")
+	}
+	return height, nil
+}
+
 // @title	获取钱包余额
 // @param	Self		*Chain			模块实例
 // @param	chainType	enum.ChainType	链类型

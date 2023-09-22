@@ -7,6 +7,8 @@ package module
 
 import (
 	"crypto/ecdsa"
+	timex "time"
+
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
@@ -18,7 +20,6 @@ import (
 	"github.com/fbsobreira/gotron-sdk/pkg/proto/core"
 	v9 "github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
-	timex "time"
 )
 
 func init() {
@@ -146,6 +147,10 @@ type chain_ struct {
 
 func (c *chain_) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
 	return c.GetAccount_(currencyType, index)
+}
+
+func (c *chain_) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
+	return c.GetCurrentHeight_(chainType)
 }
 
 func (c *chain_) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
