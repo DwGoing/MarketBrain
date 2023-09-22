@@ -26,8 +26,8 @@ type ChainConfig struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Usdt  string   `protobuf:"bytes,1,opt,name=usdt,proto3" json:"usdt,omitempty"`
-	Nodes []string `protobuf:"bytes,2,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	Usdt  string   `protobuf:"bytes,1,opt,name=usdt,proto3" json:"usdt,omitempty"`   // USDT合约地址
+	Nodes []string `protobuf:"bytes,2,rep,name=nodes,proto3" json:"nodes,omitempty"` // 节点URL
 }
 
 func (x *ChainConfig) Reset() {
@@ -81,8 +81,8 @@ type SetRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Mnemonic     *string                 `protobuf:"bytes,1,opt,name=mnemonic,proto3,oneof" json:"mnemonic,omitempty"`
-	ChainConfigs map[string]*ChainConfig `protobuf:"bytes,2,rep,name=chainConfigs,proto3" json:"chainConfigs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Mnemonic     *string                 `protobuf:"bytes,1,opt,name=mnemonic,proto3,oneof" json:"mnemonic,omitempty"`                                                                                           // 助记词
+	ChainConfigs map[string]*ChainConfig `protobuf:"bytes,2,rep,name=chainConfigs,proto3" json:"chainConfigs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 链相关配置
 }
 
 func (x *SetRequest) Reset() {
@@ -136,8 +136,8 @@ type LoadResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Mnemonic     string                  `protobuf:"bytes,1,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
-	ChainConfigs map[string]*ChainConfig `protobuf:"bytes,2,rep,name=chainConfigs,proto3" json:"chainConfigs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Mnemonic     string                  `protobuf:"bytes,1,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`                                                                                                 // 助记词
+	ChainConfigs map[string]*ChainConfig `protobuf:"bytes,2,rep,name=chainConfigs,proto3" json:"chainConfigs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // 链相关配置
 }
 
 func (x *LoadResponse) Reset() {
