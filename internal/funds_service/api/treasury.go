@@ -126,3 +126,46 @@ func SubmitRechargeOrderTransactionApi(ctx *gin.Context) {
 	}
 	Response.Success(ctx, nil)
 }
+
+// @title	手动检查订单状态
+// @param	Self	*Treasury												模块实例
+// @param	ctx		context.Context											上下文
+// @param	request	*treasury_generated.CheckRechargeOrderStatusRequest		请求体
+// @return	_		*treasury_generated.CheckRechargeOrderStatusResponse	响应体
+// @return	_		error													异常信息
+func (Self *Treasury) CheckRechargeOrderStatusRpc(ctx context.Context, request *treasury_generated.CheckRechargeOrderStatusRequest) (*treasury_generated.CheckRechargeOrderStatusResponse, error) {
+	treasuryModule, _ := module.GetTreasury()
+	status, err := treasuryModule.CheckRechargeOrderStatus(request.OrderId)
+	return &treasury_generated.CheckRechargeOrderStatusResponse{
+		Status: status.String(),
+		Error:  err.Error(),
+	}, nil
+}
+
+type CheckRechargeOrderStatusRequest struct {
+	OrderId string `json:"orderId"`
+}
+
+type CheckRechargeOrderStatusResponse struct {
+	Status string `json:"orderId"`
+	Error  string `json:"error"`
+}
+
+// @title	手动检查订单状态
+// @param	Self	*Treasury		模块实例
+// @param	ctx		*gin.Context	上下文
+// @return	_		error			异常信息
+func CheckRechargeOrderStatusApi(ctx *gin.Context) {
+	var request CheckRechargeOrderStatusRequest
+	err := ctx.ShouldBind(&request)
+	if err != nil {
+		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
+		return
+	}
+	treasuryModule, _ := module.GetTreasury()
+	status, err := treasuryModule.CheckRechargeOrderStatus(request.OrderId)
+	Response.Success(ctx, CheckRechargeOrderStatusResponse{
+		Status: status.String(),
+		Error:  err.Error(),
+	})
+}

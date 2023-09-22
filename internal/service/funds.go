@@ -53,7 +53,8 @@ func NewFunds(service *Funds) (*Funds, error) {
 		engine := gin.Default()
 
 		engine.POST("test", func(ctx *gin.Context) {
-			zap.S().Warnf("Notify ===> ok")
+			body, _ := ctx.GetRawData()
+			zap.S().Warnf("Notify ===> ok %s", body)
 			Response.Success(ctx, nil)
 		})
 

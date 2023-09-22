@@ -56,7 +56,7 @@ func (Self *EventBus) checkRechargeOrderStatus() {
 	// 解锁
 	defer redisClient.Del(context.Background(), lock).Result()
 	treasury, _ := GetTreasury()
-	wallets, err := treasury.CheckRechargeOrderStatus()
+	wallets, err := treasury.CheckRechargeOrdersStatus()
 	if err != nil {
 		zap.S().Errorf("check recharge order error: %s", err)
 		return
