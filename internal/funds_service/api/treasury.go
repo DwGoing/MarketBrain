@@ -127,6 +127,46 @@ func SubmitRechargeOrderTransactionApi(ctx *gin.Context) {
 	Response.Success(ctx, nil)
 }
 
+// @title	取消充值订单
+// @param	Self	*Treasury										模块实例
+// @param	ctx		context.Context									上下文
+// @param	request	*treasury_generated.CancelRechargeOrderRequest	请求体
+// @return	_		*emptypb.Empty									响应体
+// @return	_		error											异常信息
+func (Self *Treasury) CancelRechargeOrderRpc(ctx context.Context, request *treasury_generated.CancelRechargeOrderRequest) (*emptypb.Empty, error) {
+	treasuryModule, _ := module.GetTreasury()
+	err := treasuryModule.CancelRechargeOrder(request.OrderId)
+	if err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+type CancelRechargeOrderRequest struct {
+	OrderId string `json:"orderId"`
+}
+
+// @title	取消充值订单
+// @param	Self	*Treasury										模块实例
+// @param	ctx		*gin.Context									上下文
+// @param	request	*treasury_generated.CancelRechargeOrderRequest	请求体
+// @return	_		*emptypb.Empty									响应体
+// @return	_		error											异常信息
+func (Self *Treasury) CancelRechargeOrderApi(ctx *gin.Context) {
+	var request CheckRechargeOrderStatusRequest
+	err := ctx.ShouldBind(&request)
+	if err != nil {
+		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
+		return
+	}
+	treasuryModule, _ := module.GetTreasury()
+	err = treasuryModule.CancelRechargeOrder(request.OrderId)
+	if err != nil {
+		Response.Fail(ctx, enum.ApiErrorType_ServiceError, err)
+	}
+	Response.Success(ctx, nil)
+}
+
 // @title	手动检查订单状态
 // @param	Self	*Treasury												模块实例
 // @param	ctx		context.Context											上下文
