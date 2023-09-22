@@ -147,22 +147,163 @@ func (Self *Treasury) SubmitRechargeOrderTransaction(orderId string, txHash stri
 }
 
 // @title	检查充值订单状态
-// @param	Self	*Treasury							模块实例
-// @return	_		[]model.WalletCollectionInfomation	待归集钱包
-// @return	_		error								异常信息
-func (Self *Treasury) CheckRechargeOrderStatus() ([]model.WalletCollectionInfomation, error) {
-	checkExpireTime := func(client *gorm.DB, order model.RechargeOrderRecord) {
-		// 检查过期时间
-		if order.ExpireAt.Before(time.Now()) {
+// @param	Self			*Treasury							模块实例
+// @param	client 			*gorm.DB							mysql客户端
+// @param	rechargeOrder 	*model.RechargeOrderRecord			订单
+// @return	_				*model.WalletCollectionInfomation	待归集钱包
+// @return	_				error								异常信息
+func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *model.RechargeOrderRecord) (*model.WalletCollectionInfomation, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	chainType, _ := new(enum.ChainType).Parse(rechargeOrder.ChainType)
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok {
+		return nil, errors.New("get chain config failed")
+	}
+	chain, err := GetChain()
+	if err != nil {
+		return nil, err
+	}
+	// 检查交易状态
+	var wallet model.WalletCollectionInfomation
+	if strings.TrimSpace(rechargeOrder.TxHash) != "" {
+		result, timeStamp, to, amount, confirms, err := chain.DecodeTransaction(chainType, &chainConfig.USDT, rechargeOrder.TxHash)
+		if err != nil {
+			zap.S().Errorf("decode transaction error: %s", err)
+			// 检查是否过期
+			if rechargeOrder.ExpireAt.Before(time.Now()) {
+				model.UpdateRechargeOrderRecords(client, model.UpdateOption{
+					Conditions:           "`ID` = ?",
+					ConditionsParameters: []any{rechargeOrder.Id},
+					Values: map[string]any{
+						"STATUS": enum.RechargeStatus_CANCELLED.String(),
+					},
+				})
+				return nil, errors.New("order already expired")
+			}
+		}
+		if !result ||
+			timeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
+			to != rechargeOrder.WalletAddress ||
+			amount < rechargeOrder.Amount {
 			model.UpdateRechargeOrderRecords(client, model.UpdateOption{
 				Conditions:           "`ID` = ?",
-				ConditionsParameters: []any{order.Id},
+				ConditionsParameters: []any{rechargeOrder.Id},
 				Values: map[string]any{
 					"STATUS": enum.RechargeStatus_CANCELLED.String(),
 				},
 			})
+			return nil, errors.New("tx hash invaild")
+		}
+		if confirms < 8 {
+			return nil, errors.New("insufficient number of confirmations")
+		}
+		// 更新订单状态
+		model.UpdateRechargeOrderRecords(client, model.UpdateOption{
+			Conditions:           "`ID` = ?",
+			ConditionsParameters: []any{rechargeOrder.Id},
+			Values: map[string]any{
+				"STATUS": enum.RechargeStatus_PAID.String(),
+			},
+		})
+		// 发起回调
+		notifyStatus := enum.RechargeStatus_NOTIFY_OK
+		for retry := 0; retry < 5; retry++ {
+			time.Sleep(time.Minute * time.Duration(retry))
+			notifyModule, _ := GetNotify()
+			err = notifyModule.Send(rechargeOrder.CallbackUrl, rechargeOrder.ExternalData)
+			if err != nil {
+				notifyStatus = enum.RechargeStatus_NOTIFY_FAILED
+				zap.S().Errorf("notify error: %s", err)
+			} else {
+				notifyStatus = enum.RechargeStatus_NOTIFY_OK
+				break
+			}
+		}
+		// 更新订单状态
+		model.UpdateRechargeOrderRecords(client, model.UpdateOption{
+			Conditions:           "`ID` = ?",
+			ConditionsParameters: []any{rechargeOrder.Id},
+			Values: map[string]any{
+				"STATUS": notifyStatus.String(),
+			},
+		})
+		// 待归集
+		wallet = model.WalletCollectionInfomation{
+			Index:     rechargeOrder.WalletIndex,
+			ChainType: chainType,
+			Address:   rechargeOrder.WalletAddress,
+		}
+	} else {
+		// 检查是否过期
+		if rechargeOrder.ExpireAt.Before(time.Now()) {
+			model.UpdateRechargeOrderRecords(client, model.UpdateOption{
+				Conditions:           "`ID` = ?",
+				ConditionsParameters: []any{rechargeOrder.Id},
+				Values: map[string]any{
+					"STATUS": enum.RechargeStatus_CANCELLED.String(),
+				},
+			})
+			return nil, errors.New("order already expired")
 		}
 	}
+	return &wallet, nil
+}
+
+// @title	检查充值订单状态
+// @param	Self	*Treasury			模块实例
+// @param	id		string				订单ID
+// @return	_		enum.RechargeStatus	订单状态
+// @return	_		error				异常信息
+func (Self *Treasury) CheckRechargeOrderStatus(id string) (enum.RechargeStatus, error) {
+	storageModule, _ := GetStorage()
+	mysqlClient, err := storageModule.GetMysqlClient()
+	if err != nil {
+		return 0, err
+	}
+	db, err := mysqlClient.DB()
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+	rechargeOrders, total, err := model.GetRechargeOrderRecords(mysqlClient, model.GetOption{
+		Conditions:           "`ID` = ?",
+		ConditionsParameters: []any{id},
+	})
+	if err != nil {
+		return 0, err
+	}
+	if total < 1 {
+		return 0, errors.New("order not existed")
+	}
+	rechargeOrder := rechargeOrders[0]
+	_, err = Self.checkRechargeOrderStatus(mysqlClient, &rechargeOrder)
+	if err != nil {
+		return 0, err
+	}
+	rechargeOrders, _, err = model.GetRechargeOrderRecords(mysqlClient, model.GetOption{
+		Conditions:           "`ID` = ?",
+		ConditionsParameters: []any{id},
+	})
+	if err != nil {
+		return 0, err
+	}
+	rechargeOrder = rechargeOrders[0]
+	status, err := new(enum.RechargeStatus).Parse(rechargeOrder.Status)
+	if err != nil {
+		return 0, err
+	}
+	return status, nil
+}
+
+// @title	检查充值订单状态
+// @param	Self	*Treasury							模块实例
+// @return	_		[]model.WalletCollectionInfomation	待归集钱包
+// @return	_		error								异常信息
+func (Self *Treasury) CheckRechargeOrdersStatus() ([]model.WalletCollectionInfomation, error) {
 	storageModule, _ := GetStorage()
 	mysqlClient, err := storageModule.GetMysqlClient()
 	if err != nil {
@@ -181,76 +322,14 @@ func (Self *Treasury) CheckRechargeOrderStatus() ([]model.WalletCollectionInfoma
 	if err != nil {
 		return nil, err
 	}
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		return nil, err
-	}
-	chain, err := GetChain()
-	if err != nil {
-		return nil, err
-	}
 	wallets := []model.WalletCollectionInfomation{}
 	for _, rechargeOrder := range rechargeOrders {
-		chainType, _ := new(enum.ChainType).Parse(rechargeOrder.ChainType)
-		chainConfig, ok := config.ChainConfigs[chainType.String()]
-		if !ok {
+		wallet, err := Self.checkRechargeOrderStatus(mysqlClient, &rechargeOrder)
+		if err != nil {
+			zap.S().Errorf("check recharge order error: %s", err)
 			continue
 		}
-		// 检查交易状态
-		if strings.TrimSpace(rechargeOrder.TxHash) != "" {
-			result, timeStamp, to, amount, confirms, err := chain.DecodeTransaction(chainType, &chainConfig.USDT, rechargeOrder.TxHash)
-			if err != nil {
-				zap.S().Errorf("decode transaction error: %s", err)
-				// 检查是否过期
-				checkExpireTime(mysqlClient, rechargeOrder)
-				continue
-			}
-			if !result ||
-				timeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
-				to != rechargeOrder.WalletAddress ||
-				amount < rechargeOrder.Amount {
-				model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
-					Conditions:           "`ID` = ?",
-					ConditionsParameters: []any{rechargeOrder.Id},
-					Values: map[string]any{
-						"STATUS": enum.RechargeStatus_CANCELLED.String(),
-					},
-				})
-				continue
-			}
-			if confirms < 8 {
-				continue
-			}
-			// 更新订单状态
-			model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
-				Conditions:           "`ID` = ?",
-				ConditionsParameters: []any{rechargeOrder.Id},
-				Values: map[string]any{
-					"STATUS": enum.RechargeStatus_PAID.String(),
-				},
-			})
-			// 发起回调
-			for retry := 0; retry < 5; retry++ {
-				time.Sleep(time.Minute * time.Duration(retry))
-				notifyModule, _ := GetNotify()
-				err = notifyModule.Send(rechargeOrder.CallbackUrl, rechargeOrder.ExternalData)
-				if err != nil {
-					zap.S().Errorf("notify error: %s", err)
-				} else {
-					break
-				}
-			}
-			// 待归集
-			wallets = append(wallets, model.WalletCollectionInfomation{
-				Index:     rechargeOrder.WalletIndex,
-				ChainType: chainType,
-				Address:   rechargeOrder.WalletAddress,
-			})
-		} else {
-			// 检查是否过期
-			checkExpireTime(mysqlClient, rechargeOrder)
-		}
+		wallets = append(wallets, *wallet)
 	}
 	return wallets, nil
 }

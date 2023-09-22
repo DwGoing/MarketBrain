@@ -23,8 +23,12 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TreasuryClient interface {
+	// 创建充值订单
 	CreateRechargeOrderRpc(ctx context.Context, in *CreateRechargeOrderRequest, opts ...grpc.CallOption) (*CreateRechargeOrderResponse, error)
+	// 提交充值交易
 	SubmitRechargeOrderTransactionRpc(ctx context.Context, in *SubmitRechargeOrderTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// 手动检查订单状态
+	CheckRechargeOrderStatusRpc(ctx context.Context, in *CheckRechargeOrderStatusRequest, opts ...grpc.CallOption) (*CheckRechargeOrderStatusResponse, error)
 }
 
 type treasuryClient struct {
@@ -53,12 +57,25 @@ func (c *treasuryClient) SubmitRechargeOrderTransactionRpc(ctx context.Context, 
 	return out, nil
 }
 
+func (c *treasuryClient) CheckRechargeOrderStatusRpc(ctx context.Context, in *CheckRechargeOrderStatusRequest, opts ...grpc.CallOption) (*CheckRechargeOrderStatusResponse, error) {
+	out := new(CheckRechargeOrderStatusResponse)
+	err := c.cc.Invoke(ctx, "/Treasury/CheckRechargeOrderStatusRpc", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TreasuryServer is the server API for Treasury service.
 // All implementations must embed UnimplementedTreasuryServer
 // for forward compatibility
 type TreasuryServer interface {
+	// 创建充值订单
 	CreateRechargeOrderRpc(context.Context, *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error)
+	// 提交充值交易
 	SubmitRechargeOrderTransactionRpc(context.Context, *SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
+	// 手动检查订单状态
+	CheckRechargeOrderStatusRpc(context.Context, *CheckRechargeOrderStatusRequest) (*CheckRechargeOrderStatusResponse, error)
 	mustEmbedUnimplementedTreasuryServer()
 }
 
@@ -71,6 +88,9 @@ func (UnimplementedTreasuryServer) CreateRechargeOrderRpc(context.Context, *Crea
 }
 func (UnimplementedTreasuryServer) SubmitRechargeOrderTransactionRpc(context.Context, *SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitRechargeOrderTransactionRpc not implemented")
+}
+func (UnimplementedTreasuryServer) CheckRechargeOrderStatusRpc(context.Context, *CheckRechargeOrderStatusRequest) (*CheckRechargeOrderStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckRechargeOrderStatusRpc not implemented")
 }
 func (UnimplementedTreasuryServer) mustEmbedUnimplementedTreasuryServer() {}
 
@@ -121,6 +141,24 @@ func _Treasury_SubmitRechargeOrderTransactionRpc_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Treasury_CheckRechargeOrderStatusRpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckRechargeOrderStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TreasuryServer).CheckRechargeOrderStatusRpc(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Treasury/CheckRechargeOrderStatusRpc",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TreasuryServer).CheckRechargeOrderStatusRpc(ctx, req.(*CheckRechargeOrderStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Treasury_ServiceDesc is the grpc.ServiceDesc for Treasury service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -135,6 +173,10 @@ var Treasury_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitRechargeOrderTransactionRpc",
 			Handler:    _Treasury_SubmitRechargeOrderTransactionRpc_Handler,
+		},
+		{
+			MethodName: "CheckRechargeOrderStatusRpc",
+			Handler:    _Treasury_CheckRechargeOrderStatusRpc_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
