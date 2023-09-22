@@ -146,6 +146,38 @@ func (Self *Treasury) SubmitRechargeOrderTransaction(orderId string, txHash stri
 	return nil
 }
 
+// @title	取消充值订单
+// @param	Self		*Treasury	模块实例
+// @param	orderId		string		订单ID
+// @return	_			error		异常信息
+func (Self *Treasury) CancelRechargeOrder(orderId string) error {
+	if strings.TrimSpace(orderId) == "" {
+		return errors.New("parameter invaild")
+	}
+	storageModule, _ := GetStorage()
+	mysqlClient, err := storageModule.GetMysqlClient()
+	if err != nil {
+		return err
+	}
+	db, err := mysqlClient.DB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	// 更新订单状态
+	err = model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
+		Conditions:           "`ID` = ?",
+		ConditionsParameters: []any{orderId},
+		Values: map[string]any{
+			"STATUS": enum.RechargeStatus_CANCELLED.String(),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // @title	检查充值订单状态
 // @param	Self			*Treasury							模块实例
 // @param	client 			*gorm.DB							mysql客户端

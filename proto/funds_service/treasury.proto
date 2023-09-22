@@ -9,6 +9,8 @@ service Treasury {
     rpc CreateRechargeOrderRpc (CreateRechargeOrderRequest) returns (CreateRechargeOrderResponse);
     // 提交充值交易
     rpc SubmitRechargeOrderTransactionRpc (SubmitRechargeOrderTransactionRequest) returns (google.protobuf.Empty);
+    // 取消充值订单
+    rpc CancelRechargeOrderRpc (CancelRechargeOrderRequest) returns (google.protobuf.Empty);
     // 手动检查订单状态
     rpc CheckRechargeOrderStatusRpc (CheckRechargeOrderStatusRequest) returns (CheckRechargeOrderStatusResponse);
 }
@@ -31,6 +33,10 @@ message CreateRechargeOrderResponse {
 message SubmitRechargeOrderTransactionRequest {
     string orderId = 1; // 订单号
     string txHash = 2; // 转账交易Hash
+}
+
+message CancelRechargeOrderRequest {
+    string orderId = 1; // 订单号
 }
 
 message CheckRechargeOrderStatusRequest {
