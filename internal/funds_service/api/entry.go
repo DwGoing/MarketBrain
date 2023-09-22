@@ -1,8 +1,18 @@
 package api
 
 import (
+	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
+
+func RootApi(engine *gin.Engine) {
+	engine.POST("test", func(ctx *gin.Context) {
+		body, _ := ctx.GetRawData()
+		zap.S().Warnf("Notify ===> ok %s", body)
+		Response.Success(ctx, nil)
+	})
+}
 
 // @title	Confgig Rpc接口
 func ConfigRpc() *Config {
