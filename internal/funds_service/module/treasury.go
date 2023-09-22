@@ -333,3 +333,30 @@ func (Self *Treasury) CheckRechargeOrdersStatus() ([]model.WalletCollectionInfom
 	}
 	return wallets, nil
 }
+
+// @title	查询充值订单
+// @param	Self	*Treasury					模块实例
+// @return	_		[]model.RechargeOrderRecord	充值订单
+// @return	_		error						异常信息
+func (Self *Treasury) GetRechargeOrders(conditions string, conditionsParameters []any, pageSize int64, pageIndex int64) ([]model.RechargeOrderRecord, error) {
+	storageModule, _ := GetStorage()
+	mysqlClient, err := storageModule.GetMysqlClient()
+	if err != nil {
+		return nil, err
+	}
+	db, err := mysqlClient.DB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	orders, _, err := model.GetRechargeOrderRecords(mysqlClient, model.GetOption{
+		Conditions:           conditions,
+		ConditionsParameters: conditionsParameters,
+		PageSize:             pageSize,
+		PageIndex:            pageIndex,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
+}

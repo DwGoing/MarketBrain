@@ -118,10 +118,12 @@ func init() {
 
 type EventBusConstructFunc func(impl *EventBus) (*EventBus, error)
 type chain_ struct {
-	GetAccount_        func(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
-	DecodeTransaction_ func(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
-	GetBalance_        func(chainType enum.ChainType, contract *string, wallet string) (float64, error)
-	Transfer_          func(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
+	GetAccount_               func(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
+	DecodeTransaction_        func(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
+	GetCurrentHeight_         func(chainType enum.ChainType) (int64, error)
+	GetBalance_               func(chainType enum.ChainType, contract *string, wallet string) (float64, error)
+	Transfer_                 func(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
+	GetTransactionFromBlocks_ func(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error)
 }
 
 func (c *chain_) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
@@ -132,12 +134,20 @@ func (c *chain_) DecodeTransaction(chainType enum.ChainType, contract *string, t
 	return c.DecodeTransaction_(chainType, contract, txHash)
 }
 
+func (c *chain_) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
+	return c.GetCurrentHeight_(chainType)
+}
+
 func (c *chain_) GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error) {
 	return c.GetBalance_(chainType, contract, wallet)
 }
 
 func (c *chain_) Transfer(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error) {
 	return c.Transfer_(chainType, token, from, to, amount, remarks)
+}
+
+func (c *chain_) GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error) {
+	return c.GetTransactionFromBlocks_(chainType, start, end)
 }
 
 type config_ struct {
@@ -180,7 +190,9 @@ func (s *storage_) GetMysqlClient() (*gorm.DB, error) {
 type treasury_ struct {
 	CreateRechargeOrder_            func(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
 	SubmitRechargeOrderTransaction_ func(orderId string, txHash string) error
-	CheckRechargeOrderStatus_       func() ([]model.WalletCollectionInfomation, error)
+	CheckRechargeOrderStatus_       func(id string) (enum.RechargeStatus, error)
+	CheckRechargeOrdersStatus_      func() ([]model.WalletCollectionInfomation, error)
+	GetRechargeOrders_              func(conditions string, conditionsParameters []any, pageSize int64, pageIndex int64) ([]model.RechargeOrderRecord, error)
 }
 
 func (t *treasury_) CreateRechargeOrder(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error) {
@@ -191,15 +203,25 @@ func (t *treasury_) SubmitRechargeOrderTransaction(orderId string, txHash string
 	return t.SubmitRechargeOrderTransaction_(orderId, txHash)
 }
 
-func (t *treasury_) CheckRechargeOrderStatus() ([]model.WalletCollectionInfomation, error) {
-	return t.CheckRechargeOrderStatus_()
+func (t *treasury_) CheckRechargeOrderStatus(id string) (enum.RechargeStatus, error) {
+	return t.CheckRechargeOrderStatus_(id)
+}
+
+func (t *treasury_) CheckRechargeOrdersStatus() ([]model.WalletCollectionInfomation, error) {
+	return t.CheckRechargeOrdersStatus_()
+}
+
+func (t *treasury_) GetRechargeOrders(conditions string, conditionsParameters []any, pageSize int64, pageIndex int64) ([]model.RechargeOrderRecord, error) {
+	return t.GetRechargeOrders_(conditions, conditionsParameters, pageSize, pageIndex)
 }
 
 type ChainIOCInterface interface {
 	GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
 	DecodeTransaction(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
+	GetCurrentHeight(chainType enum.ChainType) (int64, error)
 	GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error)
 	Transfer(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
+	GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error)
 }
 
 type ConfigIOCInterface interface {
@@ -222,7 +244,9 @@ type StorageIOCInterface interface {
 type TreasuryIOCInterface interface {
 	CreateRechargeOrder(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
 	SubmitRechargeOrderTransaction(orderId string, txHash string) error
-	CheckRechargeOrderStatus() ([]model.WalletCollectionInfomation, error)
+	CheckRechargeOrderStatus(id string) (enum.RechargeStatus, error)
+	CheckRechargeOrdersStatus() ([]model.WalletCollectionInfomation, error)
+	GetRechargeOrders(conditions string, conditionsParameters []any, pageSize int64, pageIndex int64) ([]model.RechargeOrderRecord, error)
 }
 
 var _chainSDID string

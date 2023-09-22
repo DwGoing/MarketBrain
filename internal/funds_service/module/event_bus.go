@@ -2,12 +2,14 @@ package module
 
 import (
 	"context"
+	"log"
+	"os"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
 
@@ -17,6 +19,8 @@ import (
 type EventBus struct {
 	crontab              *cron.Cron
 	walletCollectChannel chan model.WalletCollectionInfomation
+
+	currentHeights map[enum.ChainType]int64
 }
 
 // @title	构造函数
@@ -24,8 +28,31 @@ type EventBus struct {
 // @return _ 		*EventBus 	模块实例
 // @return _ 		error 		异常信息
 func NewEventBus(module *EventBus) (*EventBus, error) {
-	module.crontab = cron.New()
-	module.crontab.AddFunc("*/10 * * * * ?", module.checkRechargeOrderStatus)
+	chainModule, err := GetChain()
+	if err != nil {
+		return nil, err
+	}
+	// 初始化区块高度
+	module.currentHeights = map[enum.ChainType]int64{
+		enum.ChainType_TRON: 0,
+	}
+	for k := range module.currentHeights {
+		height, err := chainModule.GetCurrentHeight(k)
+		if err != nil {
+			return nil, err
+		}
+		module.currentHeights[k] = height
+	}
+
+	module.crontab = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags)))))
+	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.checkRechargeOrderStatus)
+	if err != nil {
+		return nil, err
+	}
+	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.listenTransaction)
+	if err != nil {
+		return nil, err
+	}
 	module.crontab.Start()
 	module.walletCollectChannel = make(chan model.WalletCollectionInfomation, 1024)
 	go module.collectWallet()
@@ -50,7 +77,7 @@ func (Self *EventBus) checkRechargeOrderStatus() {
 		return
 	}
 	if !ok {
-		zap.S().Errorf("get RECHARGE_ORDER_STATUS_CHEAKING lock failed: %s", err)
+		zap.S().Errorf("get RECHARGE_ORDER_STATUS_CHEAKING lock failed")
 		return
 	}
 	// 解锁
@@ -145,11 +172,86 @@ func (Self *EventBus) collectWallet() {
 						zap.S().Errorf("transfer usdt error: %s", err)
 						return
 					}
-					zap.S().Debugf("collect [%s] %s === %f ===> %s", txHash, wallet.Address, balance, account.GetAddress())
+					zap.S().Debugf("collect [%s] %s === %f ===> %s", txHash, wallet.Address, balance, mainAccount.GetAddress())
 				}
 			}(configModule, chainModule)
 		default:
 			time.Sleep(time.Second * 5)
 		}
+	}
+}
+
+// @title	交易监听
+// @param	Self	*EventBus	模块实例
+func (Self *EventBus) listenTransaction() {
+	storageModule, _ := GetStorage()
+	redisClient, err := storageModule.GetRedisClient()
+	if err != nil {
+		zap.S().Errorf("get redis client error: %s", err)
+		return
+	}
+	defer redisClient.Close()
+	// 加锁
+	lock := "TRANSACTION_LISTENING"
+	ok, err := redisClient.SetNX(context.Background(), lock, "", time.Duration(time.Minute*10)).Result()
+	if err != nil {
+		zap.S().Errorf("get TRANSACTION_LISTENING lock error: %s", err)
+		return
+	}
+	if !ok {
+		zap.S().Errorf("get TRANSACTION_LISTENING lock failed")
+		return
+	}
+	// 解锁
+	defer redisClient.Del(context.Background(), lock).Result()
+	chainModule, _ := GetChain()
+	treasury, _ := GetTreasury()
+	for k, v := range Self.currentHeights {
+		// 查询当前高度
+		height, err := chainModule.GetCurrentHeight(k)
+		if err != nil {
+			continue
+		}
+		start := v
+		var end int64
+		// 单次最多查询5个区块
+		if height-v > 5 {
+			end = height + 5
+		} else {
+			end = height
+		}
+		// 获取区块中代币交易
+		transactions, err := chainModule.GetTransactionFromBlocks(k, start, end)
+		if err != nil {
+			continue
+		}
+		// 查找匹配的订单
+		err = func() error {
+			for _, transaction := range transactions {
+				orders, err := treasury.GetRechargeOrders(
+					"`CREATED_AT` <= ? AND `CHAIN_TYPE` = ? AND `AMOUNT` = ? AND `WALLET_ADDRESS` = ? AND `STATUS` = ?",
+					[]any{time.UnixMilli(transaction.TimeStamp), transaction.ChainType.String(), transaction.Amount, transaction.To, enum.RechargeStatus_UNPAID.String()},
+					1, 1,
+				)
+				if err != nil {
+					return err
+				}
+				if len(orders) < 1 {
+					continue
+				}
+				order := orders[0]
+				// 提交Hash等待验证
+				err = treasury.SubmitRechargeOrderTransaction(order.Id, transaction.Hash)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			zap.S().Errorf("order match error: %s", err)
+			continue
+		}
+		Self.currentHeights[k] = end
 	}
 }
