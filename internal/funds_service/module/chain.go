@@ -448,10 +448,14 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, contract *string,
 			return result, timeStamp, to, amount, confirms, err
 		}
 		timeStamp = tx.GetBlockTimeStamp()
+		txWithRawData, err := client.GetTransactionByID(txHash)
+		if err != nil {
+			return result, timeStamp, to, amount, confirms, err
+		}
 		if contract == nil {
-			txWithRawData, err := client.GetTransactionByID(txHash)
-			if err != nil {
-				return result, timeStamp, to, amount, confirms, err
+			// Trx转账
+			if txWithRawData.RawData.GetContract()[0].Type != core.Transaction_Contract_TransferContract {
+				return result, timeStamp, to, amount, confirms, errors.New("not trx transaction")
 			}
 			var tc core.TransferContract
 			err = txWithRawData.RawData.GetContract()[0].GetParameter().UnmarshalTo(&tc)
@@ -461,12 +465,16 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, contract *string,
 			to = common.EncodeCheck(tc.GetToAddress())
 			amount, _ = new(big.Float).Quo(new(big.Float).SetInt64(tc.GetAmount()), big.NewFloat(1e6)).Float64()
 		} else {
+			// Trc20转账
+			if txWithRawData.RawData.GetContract()[0].Type != core.Transaction_Contract_TriggerSmartContract {
+				return result, timeStamp, to, amount, confirms, errors.New("not trc20 transaction")
+			}
 			if *contract != common.EncodeCheck(tx.GetContractAddress()) {
-				return result, timeStamp, to, amount, confirms, errors.New("contract not match")
+				return result, timeStamp, to, amount, confirms, errors.New("not trc20 transaction")
 			}
 			log := tx.GetLog()[0]
 			if common.BytesToHexString(log.GetTopics()[0]) != common.BytesToHexString(common.Keccak256([]byte("Transfer(address,address,uint256)"))) {
-				return result, timeStamp, to, amount, confirms, errors.New("function not match")
+				return result, timeStamp, to, amount, confirms, errors.New("not trc20 transaction")
 			}
 			to = common.EncodeCheck(append([]byte{0x41}, log.GetTopics()[2][12:]...))
 			decimalsBigInt, err := client.TRC20GetDecimals(*contract)
@@ -484,6 +492,39 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, contract *string,
 		err = errors.New("unsupported chain type")
 	}
 	return result, timeStamp, to, amount, confirms, err
+}
+
+// @title	获取当前高度
+// @param	Self		*Chain			模块实例
+// @param	chainType	enum.ChainType	链类型
+// @return	_			int64			交易信息
+// @return	_			error			异常信息
+func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return 0, err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return 0, errors.New("no chain config")
+	}
+	var height int64
+	switch chainType {
+	case enum.ChainType_TRON:
+		client, err := Self.getTronClient(chainConfig)
+		if err != nil {
+			return 0, err
+		}
+		block, err := client.GetNowBlock()
+		if err != nil {
+			return 0, err
+		}
+		height = block.BlockHeader.RawData.Number
+	default:
+		return 0, errors.New("unsupported chain type")
+	}
+	return height, nil
 }
 
 // @title	获取钱包余额
@@ -618,4 +659,93 @@ func (Self *Chain) Transfer(chainType enum.ChainType, token *string, from *hd_wa
 		return "", err
 	}
 	return txHash, err
+}
+
+// @title	查询块中交易
+// @param	Self		*Chain				模块实例
+// @param	chainType	enum.ChainType		链类型
+// @param	start		int64				数量
+// @param	end			int64				备注
+// @return	_			[]model.Transaction	异常信息
+// @return	_			error				异常信息
+func (Self *Chain) GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return nil, errors.New("no chain config")
+	}
+	result := []model.Transaction{}
+	switch chainType {
+	case enum.ChainType_TRON:
+		client, err := Self.getTronClient(chainConfig)
+		if err != nil {
+			return nil, err
+		}
+		blocklist, err := client.GetBlockByLimitNext(start, end)
+		if err != nil {
+			return nil, err
+		}
+		blocks := blocklist.GetBlock()
+		for _, block := range blocks {
+			transactions := block.GetTransactions()
+			for _, transaction := range transactions {
+				var (
+					contract  *string
+					hash      string
+					timeStamp int64
+					from      string
+					to        string
+					amount    float64
+				)
+				if !transaction.GetResult().GetResult() {
+					continue
+				}
+				rawData := transaction.GetTransaction().GetRawData()
+				hash = common.Bytes2Hex(transaction.GetTxid())
+				timeStamp = rawData.Timestamp
+				switch rawData.GetContract()[0].Type {
+				case core.Transaction_Contract_TransferContract: // Trx转账
+					var tc core.TransferContract
+					err = rawData.GetContract()[0].GetParameter().UnmarshalTo(&tc)
+					if err != nil {
+						continue
+					}
+					from = common.EncodeCheck(tc.GetOwnerAddress())
+					to = common.EncodeCheck(tc.GetToAddress())
+					amount, _ = new(big.Float).Quo(new(big.Float).SetInt64(tc.GetAmount()), big.NewFloat(1e6)).Float64()
+				case core.Transaction_Contract_TriggerSmartContract: // Trc20转账
+					var tc core.TriggerSmartContract
+					err = rawData.GetContract()[0].GetParameter().UnmarshalTo(&tc)
+					if err != nil {
+						continue
+					}
+					contract = &chainConfig.USDT
+					result, _, receiver, tokenAmount, _, err := Self.DecodeTransaction(chainType, contract, hash)
+					if err != nil || !result {
+						continue
+					}
+					to = receiver
+					amount = tokenAmount
+				default:
+					continue
+				}
+				result = append(result, model.Transaction{
+					ChainType: chainType,
+					Contract:  contract,
+					Hash:      hash,
+					TimeStamp: timeStamp,
+					From:      from,
+					To:        to,
+					Amount:    amount,
+				})
+			}
+		}
+	default:
+		return nil, errors.New("unsupported chain type")
+	}
+	return result, nil
 }
