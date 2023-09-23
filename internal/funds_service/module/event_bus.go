@@ -2,8 +2,6 @@ package module
 
 import (
 	"context"
-	"log"
-	"os"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
@@ -44,12 +42,12 @@ func NewEventBus(module *EventBus) (*EventBus, error) {
 		module.currentHeights[k] = height
 	}
 
-	module.crontab = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags)))))
+	module.crontab = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
 	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.checkRechargeOrderStatus)
 	if err != nil {
 		return nil, err
 	}
-	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.listenTransaction)
+	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.checkNewTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +80,7 @@ func (Self *EventBus) checkRechargeOrderStatus() {
 	}
 	// 解锁
 	defer redisClient.Del(context.Background(), lock).Result()
+	zap.S().Debugf("start check recharge order status")
 	treasury, _ := GetTreasury()
 	wallets, err := treasury.CheckRechargeOrdersStatus()
 	if err != nil {
@@ -183,7 +182,7 @@ func (Self *EventBus) collectWallet() {
 
 // @title	交易监听
 // @param	Self	*EventBus	模块实例
-func (Self *EventBus) listenTransaction() {
+func (Self *EventBus) checkNewTransaction() {
 	storageModule, _ := GetStorage()
 	redisClient, err := storageModule.GetRedisClient()
 	if err != nil {
@@ -192,18 +191,19 @@ func (Self *EventBus) listenTransaction() {
 	}
 	defer redisClient.Close()
 	// 加锁
-	lock := "TRANSACTION_LISTENING"
+	lock := "NEW_TRANSACTION_CHECKING"
 	ok, err := redisClient.SetNX(context.Background(), lock, "", time.Duration(time.Minute*10)).Result()
 	if err != nil {
-		zap.S().Errorf("get TRANSACTION_LISTENING lock error: %s", err)
+		zap.S().Errorf("get NEW_TRANSACTION_CHECKING lock error: %s", err)
 		return
 	}
 	if !ok {
-		zap.S().Errorf("get TRANSACTION_LISTENING lock failed")
+		zap.S().Errorf("get NEW_TRANSACTION_CHECKING lock failed")
 		return
 	}
 	// 解锁
 	defer redisClient.Del(context.Background(), lock).Result()
+	zap.S().Debugf("start check new transaction")
 	chainModule, _ := GetChain()
 	treasury, _ := GetTreasury()
 	for k, v := range Self.currentHeights {
