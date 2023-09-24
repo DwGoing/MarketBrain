@@ -6,6 +6,7 @@
 package module
 
 import (
+	"crypto/ecdsa"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
@@ -13,6 +14,8 @@ import (
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	singleton "github.com/alibaba/ioc-golang/autowire/singleton"
 	util "github.com/alibaba/ioc-golang/autowire/util"
+	"github.com/fbsobreira/gotron-sdk/pkg/client"
+	"github.com/fbsobreira/gotron-sdk/pkg/proto/core"
 	v9 "github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	timex "time"
@@ -114,24 +117,35 @@ func init() {
 		},
 	}
 	normal.RegisterStructDescriptor(treasuryStructDescriptor)
+	normal.RegisterStructDescriptor(&autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &tron_{}
+		},
+	})
+	tronStructDescriptor := &autowire.StructDescriptor{
+		Factory: func() interface{} {
+			return &Tron{}
+		},
+		Metadata: map[string]interface{}{
+			"aop":      map[string]interface{}{},
+			"autowire": map[string]interface{}{},
+		},
+	}
+	normal.RegisterStructDescriptor(tronStructDescriptor)
 }
 
 type EventBusConstructFunc func(impl *EventBus) (*EventBus, error)
 type chain_ struct {
 	GetAccount_               func(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
-	DecodeTransaction_        func(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
 	GetCurrentHeight_         func(chainType enum.ChainType) (int64, error)
 	GetBalance_               func(chainType enum.ChainType, contract *string, wallet string) (float64, error)
 	Transfer_                 func(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
 	GetTransactionFromBlocks_ func(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error)
+	DecodeTransaction_        func(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error)
 }
 
 func (c *chain_) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
 	return c.GetAccount_(currencyType, index)
-}
-
-func (c *chain_) DecodeTransaction(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error) {
-	return c.DecodeTransaction_(chainType, contract, txHash)
 }
 
 func (c *chain_) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
@@ -148,6 +162,10 @@ func (c *chain_) Transfer(chainType enum.ChainType, token *string, from *hd_wall
 
 func (c *chain_) GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error) {
 	return c.GetTransactionFromBlocks_(chainType, start, end)
+}
+
+func (c *chain_) DecodeTransaction(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error) {
+	return c.DecodeTransaction_(chainType, txHash)
 }
 
 type config_ struct {
@@ -190,6 +208,7 @@ func (s *storage_) GetMysqlClient() (*gorm.DB, error) {
 type treasury_ struct {
 	CreateRechargeOrder_            func(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
 	SubmitRechargeOrderTransaction_ func(orderId string, txHash string) error
+	CancelRechargeOrder_            func(orderId string) error
 	CheckRechargeOrderStatus_       func(id string) (enum.RechargeStatus, error)
 	CheckRechargeOrdersStatus_      func() ([]model.WalletCollectionInfomation, error)
 	GetRechargeOrders_              func(conditions string, conditionsParameters []any, pageSize int64, pageIndex int64) ([]model.RechargeOrderRecord, error)
@@ -201,6 +220,10 @@ func (t *treasury_) CreateRechargeOrder(externalIdentity string, externalData []
 
 func (t *treasury_) SubmitRechargeOrderTransaction(orderId string, txHash string) error {
 	return t.SubmitRechargeOrderTransaction_(orderId, txHash)
+}
+
+func (t *treasury_) CancelRechargeOrder(orderId string) error {
+	return t.CancelRechargeOrder_(orderId)
 }
 
 func (t *treasury_) CheckRechargeOrderStatus(id string) (enum.RechargeStatus, error) {
@@ -215,13 +238,36 @@ func (t *treasury_) GetRechargeOrders(conditions string, conditionsParameters []
 	return t.GetRechargeOrders_(conditions, conditionsParameters, pageSize, pageIndex)
 }
 
+type tron_ struct {
+	GetTronClient_             func(nodes []string, apiKey string) (*client.GrpcClient, error)
+	SendTronTransaction_       func(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error)
+	DecodeTransaction_         func(client *client.GrpcClient, txHash string) (*model.Transaction, error)
+	GetTransactionsFromBlocks_ func(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
+}
+
+func (t *tron_) GetTronClient(nodes []string, apiKey string) (*client.GrpcClient, error) {
+	return t.GetTronClient_(nodes, apiKey)
+}
+
+func (t *tron_) SendTronTransaction(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error) {
+	return t.SendTronTransaction_(client, privateKey, tx, waitReceipt)
+}
+
+func (t *tron_) DecodeTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error) {
+	return t.DecodeTransaction_(client, txHash)
+}
+
+func (t *tron_) GetTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error) {
+	return t.GetTransactionsFromBlocks_(client, start, end)
+}
+
 type ChainIOCInterface interface {
 	GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error)
-	DecodeTransaction(chainType enum.ChainType, contract *string, txHash string) (bool, int64, string, float64, int64, error)
 	GetCurrentHeight(chainType enum.ChainType) (int64, error)
 	GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error)
 	Transfer(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
 	GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error)
+	DecodeTransaction(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error)
 }
 
 type ConfigIOCInterface interface {
@@ -244,9 +290,17 @@ type StorageIOCInterface interface {
 type TreasuryIOCInterface interface {
 	CreateRechargeOrder(externalIdentity string, externalData []byte, callbackUrl string, chainType string, amount float64, walletIndex int64) (string, string, timex.Time, error)
 	SubmitRechargeOrderTransaction(orderId string, txHash string) error
+	CancelRechargeOrder(orderId string) error
 	CheckRechargeOrderStatus(id string) (enum.RechargeStatus, error)
 	CheckRechargeOrdersStatus() ([]model.WalletCollectionInfomation, error)
 	GetRechargeOrders(conditions string, conditionsParameters []any, pageSize int64, pageIndex int64) ([]model.RechargeOrderRecord, error)
+}
+
+type TronIOCInterface interface {
+	GetTronClient(nodes []string, apiKey string) (*client.GrpcClient, error)
+	SendTronTransaction(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error)
+	DecodeTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error)
+	GetTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
 }
 
 var _chainSDID string
@@ -410,5 +464,31 @@ func GetTreasuryIOCInterface() (TreasuryIOCInterface, error) {
 		return nil, err
 	}
 	impl := i.(TreasuryIOCInterface)
+	return impl, nil
+}
+
+var _tronSDID string
+
+func GetTron() (*Tron, error) {
+	if _tronSDID == "" {
+		_tronSDID = util.GetSDIDByStructPtr(new(Tron))
+	}
+	i, err := normal.GetImpl(_tronSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(*Tron)
+	return impl, nil
+}
+
+func GetTronIOCInterface() (TronIOCInterface, error) {
+	if _tronSDID == "" {
+		_tronSDID = util.GetSDIDByStructPtr(new(Tron))
+	}
+	i, err := normal.GetImplWithProxy(_tronSDID, nil)
+	if err != nil {
+		return nil, err
+	}
+	impl := i.(TronIOCInterface)
 	return impl, nil
 }

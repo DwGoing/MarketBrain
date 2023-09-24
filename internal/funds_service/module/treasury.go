@@ -202,7 +202,7 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 	// 检查交易状态
 	var wallet model.WalletCollectionInfomation
 	if strings.TrimSpace(rechargeOrder.TxHash) != "" {
-		result, timeStamp, to, amount, confirms, err := chain.DecodeTransaction(chainType, &chainConfig.USDT, rechargeOrder.TxHash)
+		tx, confirms, err := chain.DecodeTransaction(chainType, rechargeOrder.TxHash)
 		if err != nil {
 			zap.S().Errorf("decode transaction error: %s", err)
 			// 检查是否过期
@@ -217,10 +217,11 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 				return nil, errors.New("order already expired")
 			}
 		}
-		if !result ||
-			timeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
-			to != rechargeOrder.WalletAddress ||
-			amount < rechargeOrder.Amount {
+		if !tx.Result ||
+			tx.TimeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
+			tx.Contract != &chainConfig.USDT ||
+			tx.From != rechargeOrder.WalletAddress ||
+			tx.Amount != rechargeOrder.Amount {
 			model.UpdateRechargeOrderRecords(client, model.UpdateOption{
 				Conditions:           "`ID` = ?",
 				ConditionsParameters: []any{rechargeOrder.Id},

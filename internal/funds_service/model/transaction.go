@@ -6,9 +6,10 @@ import (
 
 type Transaction struct {
 	ChainType enum.ChainType
-	Contract  *string
 	Hash      string
+	Height    int64
 	TimeStamp int64
+	Contract  *string
 	From      string
 	To        string
 	Amount    float64
