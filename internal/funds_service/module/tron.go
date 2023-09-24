@@ -116,13 +116,17 @@ func (Self *Tron) DecodeTransaction(client *client.GrpcClient, txHash string) (*
 	if err != nil {
 		return nil, err
 	}
-	if coreTx.RawData.GetContract()[0].Type != core.Transaction_Contract_TransferContract &&
-		coreTx.RawData.GetContract()[0].Type != core.Transaction_Contract_TriggerSmartContract {
+	contracts := coreTx.RawData.GetContract()
+	if len(contracts) < 1 {
+		return nil, errors.New("not transfer transaction")
+	}
+	if contracts[0].Type != core.Transaction_Contract_TransferContract &&
+		contracts[0].Type != core.Transaction_Contract_TriggerSmartContract {
 		return nil, errors.New("not transfer transaction")
 	}
 	if tx.ContractAddress == nil {
 		var contract core.TransferContract
-		err = coreTx.RawData.GetContract()[0].GetParameter().UnmarshalTo(&contract)
+		err = contracts[0].GetParameter().UnmarshalTo(&contract)
 		if err != nil {
 			return nil, err
 		}
@@ -133,16 +137,25 @@ func (Self *Tron) DecodeTransaction(client *client.GrpcClient, txHash string) (*
 		contractAddress := common.EncodeCheck(tx.ContractAddress)
 		result.Contract = &contractAddress
 		var contract core.TriggerSmartContract
-		err = coreTx.RawData.GetContract()[0].GetParameter().UnmarshalTo(&contract)
+		err = contracts[0].GetParameter().UnmarshalTo(&contract)
 		if err != nil {
 			return nil, err
 		}
-		log := tx.GetLog()[0]
-		if common.BytesToHexString(log.GetTopics()[0]) != common.BytesToHexString(common.Keccak256([]byte("Transfer(address,address,uint256)"))) {
+		logs := tx.GetLog()
+		if len(logs) < 1 {
+			return nil, errors.New("not transfer transaction")
+		}
+		log := logs[0]
+		topics := log.GetTopics()
+		if len(topics) < 3 {
+			return nil, errors.New("not transfer transaction")
+		}
+		// 签名校验
+		if common.BytesToHexString(topics[0]) != common.BytesToHexString(common.Keccak256([]byte("Transfer(address,address,uint256)"))) {
 			return nil, errors.New("not transfer transaction")
 		}
 		result.From = common.EncodeCheck(contract.GetOwnerAddress())
-		result.To = common.EncodeCheck(append([]byte{0x41}, log.GetTopics()[2][12:]...))
+		result.To = common.EncodeCheck(append([]byte{0x41}, topics[2][12:]...))
 		decimalsBigInt, err := client.TRC20GetDecimals(contractAddress)
 		if err != nil {
 			return nil, err
@@ -178,5 +191,5 @@ func (Self *Tron) GetTransactionsFromBlocks(client *client.GrpcClient, start int
 			result = append(result, *tx)
 		}
 	}
-	return nil, nil
+	return result, nil
 }
