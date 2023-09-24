@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

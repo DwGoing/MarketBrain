@@ -512,7 +512,8 @@ func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
 	var height int64
 	switch chainType {
 	case enum.ChainType_TRON:
-		client, err := Self.getTronClient(chainConfig)
+		tron, _ := GetTron()
+		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
 		if err != nil {
 			return 0, err
 		}
@@ -547,7 +548,8 @@ func (Self *Chain) GetBalance(chainType enum.ChainType, contract *string, wallet
 	var balance float64
 	switch chainType {
 	case enum.ChainType_TRON:
-		client, err := Self.getTronClient(chainConfig)
+		tron, _ := GetTron()
+		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
 		if err != nil {
 			return 0, err
 		}
@@ -607,7 +609,8 @@ func (Self *Chain) Transfer(chainType enum.ChainType, token *string, from *hd_wa
 		var txHash string
 		switch chainType {
 		case enum.ChainType_TRON:
-			client, err := Self.getTronClient(chainConfig)
+			tron, _ := GetTron()
+			client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
 			if err != nil {
 				return "", err
 			}
@@ -629,7 +632,7 @@ func (Self *Chain) Transfer(chainType enum.ChainType, token *string, from *hd_wa
 					return "", err
 				}
 			}
-			txInfo, err := Self.sendTronTransaction(client, from.PrivateKey.ToECDSA(), tx.Transaction, true)
+			txInfo, err := tron.SendTronTransaction(client, from.PrivateKey.ToECDSA(), tx.Transaction, true)
 			if err != nil {
 				return "", err
 			}
@@ -678,74 +681,64 @@ func (Self *Chain) GetTransactionFromBlocks(chainType enum.ChainType, start int6
 	if !ok || len(chainConfig.Nodes) < 1 {
 		return nil, errors.New("no chain config")
 	}
-	result := []model.Transaction{}
+	var result []model.Transaction
 	switch chainType {
 	case enum.ChainType_TRON:
-		client, err := Self.getTronClient(chainConfig)
+		tron, _ := GetTron()
+		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
 		if err != nil {
 			return nil, err
 		}
-		blocklist, err := client.GetBlockByLimitNext(start, end)
+		result, err = tron.GetTransactionsFromBlocks(client, start, end)
 		if err != nil {
 			return nil, err
-		}
-		blocks := blocklist.GetBlock()
-		for _, block := range blocks {
-			transactions := block.GetTransactions()
-			for _, transaction := range transactions {
-				var (
-					contract  *string
-					hash      string
-					timeStamp int64
-					from      string
-					to        string
-					amount    float64
-				)
-				if !transaction.GetResult().GetResult() {
-					continue
-				}
-				rawData := transaction.GetTransaction().GetRawData()
-				hash = common.Bytes2Hex(transaction.GetTxid())
-				timeStamp = rawData.Timestamp
-				switch rawData.GetContract()[0].Type {
-				case core.Transaction_Contract_TransferContract: // Trx转账
-					var tc core.TransferContract
-					err = rawData.GetContract()[0].GetParameter().UnmarshalTo(&tc)
-					if err != nil {
-						continue
-					}
-					from = common.EncodeCheck(tc.GetOwnerAddress())
-					to = common.EncodeCheck(tc.GetToAddress())
-					amount, _ = new(big.Float).Quo(new(big.Float).SetInt64(tc.GetAmount()), big.NewFloat(1e6)).Float64()
-				case core.Transaction_Contract_TriggerSmartContract: // Trc20转账
-					var tc core.TriggerSmartContract
-					err = rawData.GetContract()[0].GetParameter().UnmarshalTo(&tc)
-					if err != nil {
-						continue
-					}
-					contract = &chainConfig.USDT
-					result, _, receiver, tokenAmount, _, err := Self.DecodeTransaction(chainType, contract, hash)
-					if err != nil || !result {
-						continue
-					}
-					to = receiver
-					amount = tokenAmount
-				default:
-					continue
-				}
-				result = append(result, model.Transaction{
-					ChainType: chainType,
-					Contract:  contract,
-					Hash:      hash,
-					TimeStamp: timeStamp,
-					From:      from,
-					To:        to,
-					Amount:    amount,
-				})
-			}
 		}
 	default:
 		return nil, errors.New("unsupported chain type")
 	}
 	return result, nil
+}
+
+// @title	解析交易
+// @param	Self		*Chain				模块实例
+// @param	chainType	enum.ChainType		链类型
+// @param	txHash		string				交易Hash
+// @return	_			*model.Transaction	交易信息
+// @return	_			error				异常信息
+func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return nil, 0, err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return nil, 0, errors.New("no chain config")
+	}
+	var transaction model.Transaction
+	var confirms int64
+	switch chainType {
+	case enum.ChainType_TRON:
+		tron, _ := GetTron()
+		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+		if err != nil {
+			return nil, 0, err
+		}
+		// 最新区块
+		block, err := client.GetNowBlock()
+		if err != nil {
+			return nil, 0, err
+		}
+		tx, err := tron.DecodeTransaction(client, txHash)
+		if err != nil {
+			return nil, 0, err
+		}
+		transaction = *tx
+		confirms = block.BlockHeader.RawData.Number - transaction.Height
+	default:
+		if err != nil {
+			return nil, 0, errors.New("unsupported chain type")
+		}
+	}
+	return &transaction, confirms, err
 }
