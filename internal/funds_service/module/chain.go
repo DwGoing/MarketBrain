@@ -91,7 +91,8 @@ func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
 	var height int64
 	switch chainType {
 	case enum.ChainType_TRON:
-		client, err := Self.getTronClient(chainConfig)
+		tron, _ := GetTron()
+		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
 		if err != nil {
 			return 0, err
 		}
