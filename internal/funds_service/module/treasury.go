@@ -46,6 +46,11 @@ func (Self *Treasury) CreateRechargeOrder(
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
 	chainModule, _ := GetChain()
 	var walletAddress string
 	switch chain {
@@ -76,7 +81,7 @@ func (Self *Treasury) CreateRechargeOrder(
 		Amount:           amount,
 		WalletIndex:      walletIndex,
 		WalletAddress:    walletAddress,
-		ExpireAt:         time.Now().Add(time.Minute * 30),
+		ExpireAt:         time.Now().Add(time.Minute * time.Duration(config.ExpireTime)),
 	}
 	record, err = model.CreateRechargeOrderRecord(mysqlClient, record)
 	if err != nil {
