@@ -46,6 +46,11 @@ func (Self *Treasury) CreateRechargeOrder(
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
 	chainModule, _ := GetChain()
 	var walletAddress string
 	switch chain {
@@ -76,7 +81,7 @@ func (Self *Treasury) CreateRechargeOrder(
 		Amount:           amount,
 		WalletIndex:      walletIndex,
 		WalletAddress:    walletAddress,
-		ExpireAt:         time.Now().Add(time.Minute * 30),
+		ExpireAt:         time.Now().Add(time.Minute * time.Duration(config.ExpireTime)),
 	}
 	record, err = model.CreateRechargeOrderRecord(mysqlClient, record)
 	if err != nil {
@@ -146,6 +151,38 @@ func (Self *Treasury) SubmitRechargeOrderTransaction(orderId string, txHash stri
 	return nil
 }
 
+// @title	取消充值订单
+// @param	Self		*Treasury	模块实例
+// @param	orderId		string		订单ID
+// @return	_			error		异常信息
+func (Self *Treasury) CancelRechargeOrder(orderId string) error {
+	if strings.TrimSpace(orderId) == "" {
+		return errors.New("parameter invaild")
+	}
+	storageModule, _ := GetStorage()
+	mysqlClient, err := storageModule.GetMysqlClient()
+	if err != nil {
+		return err
+	}
+	db, err := mysqlClient.DB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	// 更新订单状态
+	err = model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
+		Conditions:           "`ID` = ?",
+		ConditionsParameters: []any{orderId},
+		Values: map[string]any{
+			"STATUS": enum.RechargeStatus_CANCELLED.String(),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // @title	检查充值订单状态
 // @param	Self			*Treasury							模块实例
 // @param	client 			*gorm.DB							mysql客户端
@@ -170,7 +207,7 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 	// 检查交易状态
 	var wallet model.WalletCollectionInfomation
 	if strings.TrimSpace(rechargeOrder.TxHash) != "" {
-		result, timeStamp, to, amount, confirms, err := chain.DecodeTransaction(chainType, &chainConfig.USDT, rechargeOrder.TxHash)
+		tx, confirms, err := chain.DecodeTransaction(chainType, rechargeOrder.TxHash)
 		if err != nil {
 			zap.S().Errorf("decode transaction error: %s", err)
 			// 检查是否过期
@@ -182,6 +219,16 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 						"STATUS": enum.RechargeStatus_CANCELLED.String(),
 					},
 				})
+				// 订单过期
+				wallet.Status = enum.RechargeStatus_CANCELLED
+				return &wallet, errors.New("order already expired")
+			}
+		}
+		if !tx.Result ||
+			tx.TimeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
+			tx.Contract != &chainConfig.USDT ||
+			tx.From != rechargeOrder.WalletAddress ||
+			tx.Amount != rechargeOrder.Amount {
 				return nil, errors.New("order already expired")
 			}
 		}
@@ -196,10 +243,13 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 					"STATUS": enum.RechargeStatus_CANCELLED.String(),
 				},
 			})
-			return nil, errors.New("tx hash invaild")
+			// TxHash无效
+			wallet.Status = enum.RechargeStatus_CANCELLED
+			return &wallet, errors.New("tx hash invaild")
 		}
 		if confirms < 8 {
-			return nil, errors.New("insufficient number of confirmations")
+			wallet.Status = enum.RechargeStatus_UNPAID
+			return &wallet, errors.New("insufficient number of confirmations")
 		}
 		// 更新订单状态
 		model.UpdateRechargeOrderRecords(client, model.UpdateOption{
@@ -236,6 +286,7 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 			Index:     rechargeOrder.WalletIndex,
 			ChainType: chainType,
 			Address:   rechargeOrder.WalletAddress,
+			Status:    notifyStatus,
 		}
 	} else {
 		// 检查是否过期
@@ -247,7 +298,9 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 					"STATUS": enum.RechargeStatus_CANCELLED.String(),
 				},
 			})
-			return nil, errors.New("order already expired")
+			// 订单过期
+			wallet.Status = enum.RechargeStatus_CANCELLED
+			return &wallet, errors.New("order already expired")
 		}
 	}
 	return &wallet, nil
@@ -280,23 +333,11 @@ func (Self *Treasury) CheckRechargeOrderStatus(id string) (enum.RechargeStatus, 
 		return 0, errors.New("order not existed")
 	}
 	rechargeOrder := rechargeOrders[0]
-	_, err = Self.checkRechargeOrderStatus(mysqlClient, &rechargeOrder)
-	if err != nil {
+	info, err := Self.checkRechargeOrderStatus(mysqlClient, &rechargeOrder)
+	if err != nil && info == nil {
 		return 0, err
 	}
-	rechargeOrders, _, err = model.GetRechargeOrderRecords(mysqlClient, model.GetOption{
-		Conditions:           "`ID` = ?",
-		ConditionsParameters: []any{id},
-	})
-	if err != nil {
-		return 0, err
-	}
-	rechargeOrder = rechargeOrders[0]
-	status, err := new(enum.RechargeStatus).Parse(rechargeOrder.Status)
-	if err != nil {
-		return 0, err
-	}
-	return status, nil
+	return info.Status, err
 }
 
 // @title	检查充值订单状态
@@ -332,4 +373,31 @@ func (Self *Treasury) CheckRechargeOrdersStatus() ([]model.WalletCollectionInfom
 		wallets = append(wallets, *wallet)
 	}
 	return wallets, nil
+}
+
+// @title	查询充值订单
+// @param	Self	*Treasury					模块实例
+// @return	_		[]model.RechargeOrderRecord	充值订单
+// @return	_		error						异常信息
+func (Self *Treasury) GetRechargeOrders(conditions string, conditionsParameters []any, pageSize int64, pageIndex int64) ([]model.RechargeOrderRecord, error) {
+	storageModule, _ := GetStorage()
+	mysqlClient, err := storageModule.GetMysqlClient()
+	if err != nil {
+		return nil, err
+	}
+	db, err := mysqlClient.DB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	orders, _, err := model.GetRechargeOrderRecords(mysqlClient, model.GetOption{
+		Conditions:           conditions,
+		ConditionsParameters: conditionsParameters,
+		PageSize:             pageSize,
+		PageIndex:            pageIndex,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
 }

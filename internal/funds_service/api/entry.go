@@ -1,8 +1,25 @@
 package api
 
 import (
+	"github.com/DwGoing/MarketBrain/internal/funds_service/module"
+	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
+
+func RootApi(engine *gin.Engine) {
+	engine.POST("test", func(ctx *gin.Context) {
+		cm, _ := module.GetConfig()
+		c, _ := cm.Load()
+		t, _ := module.GetTron()
+		client, _ := t.GetTronClient(c.ChainConfigs["TRON"].Nodes, c.ChainConfigs["TRON"].ApiKey)
+		t.GetTransactionsFromBlocks(client, 40343179, 40343180)
+
+		body, _ := ctx.GetRawData()
+		zap.S().Warnf("Notify ===> ok %s", body)
+		Response.Success(ctx, nil)
+	})
+}
 
 // @title	Confgig Rpc接口
 func ConfigRpc() *Config {
@@ -27,4 +44,7 @@ func TreasuryRpc() *Treasury {
 // @param	router	*gin.RouterGroup	路由
 func TreasuryApi(router *gin.RouterGroup) {
 	router.POST("createRechargeOrder", CreateRechargeOrderApi)
+	router.POST("submitRechargeOrderTransaction", SubmitRechargeOrderTransactionApi)
+	router.POST("cancelRechargeOrder", CancelRechargeOrderApi)
+	router.GET("checkRechargeOrderStatus", CheckRechargeOrderStatusApi)
 }

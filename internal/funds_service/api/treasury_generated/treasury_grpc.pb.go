@@ -27,6 +27,8 @@ type TreasuryClient interface {
 	CreateRechargeOrderRpc(ctx context.Context, in *CreateRechargeOrderRequest, opts ...grpc.CallOption) (*CreateRechargeOrderResponse, error)
 	// 提交充值交易
 	SubmitRechargeOrderTransactionRpc(ctx context.Context, in *SubmitRechargeOrderTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// 取消充值订单
+	CancelRechargeOrderRpc(ctx context.Context, in *CancelRechargeOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// 手动检查订单状态
 	CheckRechargeOrderStatusRpc(ctx context.Context, in *CheckRechargeOrderStatusRequest, opts ...grpc.CallOption) (*CheckRechargeOrderStatusResponse, error)
 }
@@ -57,6 +59,15 @@ func (c *treasuryClient) SubmitRechargeOrderTransactionRpc(ctx context.Context, 
 	return out, nil
 }
 
+func (c *treasuryClient) CancelRechargeOrderRpc(ctx context.Context, in *CancelRechargeOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/Treasury/CancelRechargeOrderRpc", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *treasuryClient) CheckRechargeOrderStatusRpc(ctx context.Context, in *CheckRechargeOrderStatusRequest, opts ...grpc.CallOption) (*CheckRechargeOrderStatusResponse, error) {
 	out := new(CheckRechargeOrderStatusResponse)
 	err := c.cc.Invoke(ctx, "/Treasury/CheckRechargeOrderStatusRpc", in, out, opts...)
@@ -74,6 +85,8 @@ type TreasuryServer interface {
 	CreateRechargeOrderRpc(context.Context, *CreateRechargeOrderRequest) (*CreateRechargeOrderResponse, error)
 	// 提交充值交易
 	SubmitRechargeOrderTransactionRpc(context.Context, *SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
+	// 取消充值订单
+	CancelRechargeOrderRpc(context.Context, *CancelRechargeOrderRequest) (*emptypb.Empty, error)
 	// 手动检查订单状态
 	CheckRechargeOrderStatusRpc(context.Context, *CheckRechargeOrderStatusRequest) (*CheckRechargeOrderStatusResponse, error)
 	mustEmbedUnimplementedTreasuryServer()
@@ -88,6 +101,9 @@ func (UnimplementedTreasuryServer) CreateRechargeOrderRpc(context.Context, *Crea
 }
 func (UnimplementedTreasuryServer) SubmitRechargeOrderTransactionRpc(context.Context, *SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitRechargeOrderTransactionRpc not implemented")
+}
+func (UnimplementedTreasuryServer) CancelRechargeOrderRpc(context.Context, *CancelRechargeOrderRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelRechargeOrderRpc not implemented")
 }
 func (UnimplementedTreasuryServer) CheckRechargeOrderStatusRpc(context.Context, *CheckRechargeOrderStatusRequest) (*CheckRechargeOrderStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckRechargeOrderStatusRpc not implemented")
@@ -141,6 +157,24 @@ func _Treasury_SubmitRechargeOrderTransactionRpc_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Treasury_CancelRechargeOrderRpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelRechargeOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TreasuryServer).CancelRechargeOrderRpc(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Treasury/CancelRechargeOrderRpc",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TreasuryServer).CancelRechargeOrderRpc(ctx, req.(*CancelRechargeOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Treasury_CheckRechargeOrderStatusRpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckRechargeOrderStatusRequest)
 	if err := dec(in); err != nil {
@@ -173,6 +207,10 @@ var Treasury_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitRechargeOrderTransactionRpc",
 			Handler:    _Treasury_SubmitRechargeOrderTransactionRpc_Handler,
+		},
+		{
+			MethodName: "CancelRechargeOrderRpc",
+			Handler:    _Treasury_CancelRechargeOrderRpc_Handler,
 		},
 		{
 			MethodName: "CheckRechargeOrderStatusRpc",
