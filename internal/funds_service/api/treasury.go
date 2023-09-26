@@ -2,6 +2,7 @@ package api
 
 import (
 	context "context"
+	"errors"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/api/treasury_generated"
@@ -152,8 +153,8 @@ type CancelRechargeOrderRequest struct {
 // @param	request	*treasury_generated.CancelRechargeOrderRequest	请求体
 // @return	_		*emptypb.Empty									响应体
 // @return	_		error											异常信息
-func (Self *Treasury) CancelRechargeOrderApi(ctx *gin.Context) {
-	var request CheckRechargeOrderStatusRequest
+func CancelRechargeOrderApi(ctx *gin.Context) {
+	var request CancelRechargeOrderRequest
 	err := ctx.ShouldBind(&request)
 	if err != nil {
 		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
@@ -176,19 +177,19 @@ func (Self *Treasury) CancelRechargeOrderApi(ctx *gin.Context) {
 func (Self *Treasury) CheckRechargeOrderStatusRpc(ctx context.Context, request *treasury_generated.CheckRechargeOrderStatusRequest) (*treasury_generated.CheckRechargeOrderStatusResponse, error) {
 	treasuryModule, _ := module.GetTreasury()
 	status, err := treasuryModule.CheckRechargeOrderStatus(request.OrderId)
-	return &treasury_generated.CheckRechargeOrderStatusResponse{
-		Status: status.String(),
-		Error:  err.Error(),
-	}, nil
-}
-
-type CheckRechargeOrderStatusRequest struct {
-	OrderId string `json:"orderId"`
+	response := treasury_generated.CheckRechargeOrderStatusResponse{
+		Status: treasury_generated.RechargeStatus(status),
+	}
+	if err != nil {
+		msg := err.Error()
+		response.Error = &msg
+	}
+	return &response, nil
 }
 
 type CheckRechargeOrderStatusResponse struct {
-	Status string `json:"orderId"`
-	Error  string `json:"error"`
+	Status string  `json:"orderId"`
+	Error  *string `json:"error"`
 }
 
 // @title	手动检查订单状态
@@ -196,16 +197,19 @@ type CheckRechargeOrderStatusResponse struct {
 // @param	ctx		*gin.Context	上下文
 // @return	_		error			异常信息
 func CheckRechargeOrderStatusApi(ctx *gin.Context) {
-	var request CheckRechargeOrderStatusRequest
-	err := ctx.ShouldBind(&request)
-	if err != nil {
-		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
+	orderId, ok := ctx.GetQuery("orderId")
+	if !ok {
+		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, errors.New("parameter invaild"))
 		return
 	}
 	treasuryModule, _ := module.GetTreasury()
-	status, err := treasuryModule.CheckRechargeOrderStatus(request.OrderId)
-	Response.Success(ctx, CheckRechargeOrderStatusResponse{
+	status, err := treasuryModule.CheckRechargeOrderStatus(orderId)
+	response := CheckRechargeOrderStatusResponse{
 		Status: status.String(),
-		Error:  err.Error(),
-	})
+	}
+	if err != nil {
+		msg := err.Error()
+		response.Error = &msg
+	}
+	Response.Success(ctx, response)
 }
