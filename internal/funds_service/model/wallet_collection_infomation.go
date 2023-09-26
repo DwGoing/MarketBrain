@@ -8,4 +8,5 @@ type WalletCollectionInfomation struct {
 	Index     int64
 	ChainType enum.ChainType
 	Address   string
+	Status    enum.RechargeStatus
 }

@@ -219,7 +219,9 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 						"STATUS": enum.RechargeStatus_CANCELLED.String(),
 					},
 				})
-				return nil, errors.New("order already expired")
+				// 订单过期
+				wallet.Status = enum.RechargeStatus_CANCELLED
+				return &wallet, errors.New("order already expired")
 			}
 		}
 		if !tx.Result ||
@@ -234,10 +236,13 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 					"STATUS": enum.RechargeStatus_CANCELLED.String(),
 				},
 			})
-			return nil, errors.New("tx hash invaild")
+			// TxHash无效
+			wallet.Status = enum.RechargeStatus_CANCELLED
+			return &wallet, errors.New("tx hash invaild")
 		}
 		if confirms < 8 {
-			return nil, errors.New("insufficient number of confirmations")
+			wallet.Status = enum.RechargeStatus_UNPAID
+			return &wallet, errors.New("insufficient number of confirmations")
 		}
 		// 更新订单状态
 		model.UpdateRechargeOrderRecords(client, model.UpdateOption{
@@ -274,6 +279,7 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 			Index:     rechargeOrder.WalletIndex,
 			ChainType: chainType,
 			Address:   rechargeOrder.WalletAddress,
+			Status:    notifyStatus,
 		}
 	} else {
 		// 检查是否过期
@@ -285,7 +291,9 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 					"STATUS": enum.RechargeStatus_CANCELLED.String(),
 				},
 			})
-			return nil, errors.New("order already expired")
+			// 订单过期
+			wallet.Status = enum.RechargeStatus_CANCELLED
+			return &wallet, errors.New("order already expired")
 		}
 	}
 	return &wallet, nil
@@ -318,23 +326,11 @@ func (Self *Treasury) CheckRechargeOrderStatus(id string) (enum.RechargeStatus, 
 		return 0, errors.New("order not existed")
 	}
 	rechargeOrder := rechargeOrders[0]
-	_, err = Self.checkRechargeOrderStatus(mysqlClient, &rechargeOrder)
-	if err != nil {
+	info, err := Self.checkRechargeOrderStatus(mysqlClient, &rechargeOrder)
+	if err != nil && info == nil {
 		return 0, err
 	}
-	rechargeOrders, _, err = model.GetRechargeOrderRecords(mysqlClient, model.GetOption{
-		Conditions:           "`ID` = ?",
-		ConditionsParameters: []any{id},
-	})
-	if err != nil {
-		return 0, err
-	}
-	rechargeOrder = rechargeOrders[0]
-	status, err := new(enum.RechargeStatus).Parse(rechargeOrder.Status)
-	if err != nil {
-		return 0, err
-	}
-	return status, nil
+	return info.Status, err
 }
 
 // @title	检查充值订单状态
