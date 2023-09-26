@@ -229,6 +229,13 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 			tx.Contract != &chainConfig.USDT ||
 			tx.From != rechargeOrder.WalletAddress ||
 			tx.Amount != rechargeOrder.Amount {
+				return nil, errors.New("order already expired")
+			}
+		}
+		if !result ||
+			timeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
+			to != rechargeOrder.WalletAddress ||
+			amount < rechargeOrder.Amount {
 			model.UpdateRechargeOrderRecords(client, model.UpdateOption{
 				Conditions:           "`ID` = ?",
 				ConditionsParameters: []any{rechargeOrder.Id},
