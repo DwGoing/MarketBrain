@@ -7,13 +7,11 @@ package api
 
 import (
 	contextx "context"
-
 	"github.com/DwGoing/MarketBrain/internal/funds_service/api/config_generated"
 	"github.com/DwGoing/MarketBrain/internal/funds_service/api/treasury_generated"
 	autowire "github.com/alibaba/ioc-golang/autowire"
 	normal "github.com/alibaba/ioc-golang/autowire/normal"
 	util "github.com/alibaba/ioc-golang/autowire/util"
-	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -67,7 +65,6 @@ type treasury_ struct {
 	CreateRechargeOrderRpc_            func(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
 	SubmitRechargeOrderTransactionRpc_ func(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
 	CancelRechargeOrderRpc_            func(ctx contextx.Context, request *treasury_generated.CancelRechargeOrderRequest) (*emptypb.Empty, error)
-	CancelRechargeOrderApi_            func(ctx *gin.Context)
 	CheckRechargeOrderStatusRpc_       func(ctx contextx.Context, request *treasury_generated.CheckRechargeOrderStatusRequest) (*treasury_generated.CheckRechargeOrderStatusResponse, error)
 }
 
@@ -83,10 +80,6 @@ func (t *treasury_) CancelRechargeOrderRpc(ctx contextx.Context, request *treasu
 	return t.CancelRechargeOrderRpc_(ctx, request)
 }
 
-func (t *treasury_) CancelRechargeOrderApi(ctx *gin.Context) {
-	t.CancelRechargeOrderApi_(ctx)
-}
-
 func (t *treasury_) CheckRechargeOrderStatusRpc(ctx contextx.Context, request *treasury_generated.CheckRechargeOrderStatusRequest) (*treasury_generated.CheckRechargeOrderStatusResponse, error) {
 	return t.CheckRechargeOrderStatusRpc_(ctx, request)
 }
@@ -100,7 +93,6 @@ type TreasuryIOCInterface interface {
 	CreateRechargeOrderRpc(ctx contextx.Context, request *treasury_generated.CreateRechargeOrderRequest) (*treasury_generated.CreateRechargeOrderResponse, error)
 	SubmitRechargeOrderTransactionRpc(ctx contextx.Context, request *treasury_generated.SubmitRechargeOrderTransactionRequest) (*emptypb.Empty, error)
 	CancelRechargeOrderRpc(ctx contextx.Context, request *treasury_generated.CancelRechargeOrderRequest) (*emptypb.Empty, error)
-	CancelRechargeOrderApi(ctx *gin.Context)
 	CheckRechargeOrderStatusRpc(ctx contextx.Context, request *treasury_generated.CheckRechargeOrderStatusRequest) (*treasury_generated.CheckRechargeOrderStatusResponse, error)
 }
 
