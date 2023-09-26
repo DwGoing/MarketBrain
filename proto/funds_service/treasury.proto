@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "./;api";
+option go_package = "./;treasury_generated";
 
 import "google/protobuf/empty.proto";
 
