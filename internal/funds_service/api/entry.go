@@ -44,4 +44,7 @@ func TreasuryRpc() *Treasury {
 // @param	router	*gin.RouterGroup	路由
 func TreasuryApi(router *gin.RouterGroup) {
 	router.POST("createRechargeOrder", CreateRechargeOrderApi)
+	router.POST("submitRechargeOrderTransaction", SubmitRechargeOrderTransactionApi)
+	router.POST("cancelRechargeOrder", CancelRechargeOrderApi)
+	router.GET("checkRechargeOrderStatus", CheckRechargeOrderStatusApi)
 }
