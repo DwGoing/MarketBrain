@@ -52,14 +52,14 @@ func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
 		return 0, err
 	}
 	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.Nodes) < 1 {
+	if !ok || len(chainConfig.RpcNodes) < 1 {
 		return 0, errors.New("no chain config")
 	}
 	var height int64
 	switch chainType {
 	case enum.ChainType_TRON:
 		tron, _ := GetTron()
-		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
 		if err != nil {
 			return 0, err
 		}
@@ -88,14 +88,14 @@ func (Self *Chain) GetBalance(chainType enum.ChainType, contract *string, wallet
 		return 0, err
 	}
 	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.Nodes) < 1 {
+	if !ok || len(chainConfig.RpcNodes) < 1 {
 		return 0, errors.New("no chain config")
 	}
 	var balance float64
 	switch chainType {
 	case enum.ChainType_TRON:
 		tron, _ := GetTron()
-		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
 		if err != nil {
 			return 0, err
 		}
@@ -149,14 +149,14 @@ func (Self *Chain) Transfer(chainType enum.ChainType, token *string, from *hd_wa
 			return "", err
 		}
 		chainConfig, ok := config.ChainConfigs[chainType.String()]
-		if !ok || len(chainConfig.Nodes) < 1 {
+		if !ok || len(chainConfig.RpcNodes) < 1 {
 			return "", errors.New("no chain config")
 		}
 		var txHash string
 		switch chainType {
 		case enum.ChainType_TRON:
 			tron, _ := GetTron()
-			client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+			client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
 			if err != nil {
 				return "", err
 			}
@@ -223,7 +223,7 @@ func (Self *Chain) GetBlock(chainType enum.ChainType, height int64) (*model.Bloc
 		return nil, err
 	}
 	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.Nodes) < 1 {
+	if !ok || len(chainConfig.RpcNodes) < 1 {
 		return nil, errors.New("no chain config")
 	}
 	result := model.Block{
@@ -232,7 +232,7 @@ func (Self *Chain) GetBlock(chainType enum.ChainType, height int64) (*model.Bloc
 	switch chainType {
 	case enum.ChainType_TRON:
 		tron, _ := GetTron()
-		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -262,14 +262,14 @@ func (Self *Chain) GetTransactionFromBlocks(chainType enum.ChainType, start int6
 		return nil, err
 	}
 	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.Nodes) < 1 {
+	if !ok || len(chainConfig.RpcNodes) < 1 {
 		return nil, errors.New("no chain config")
 	}
 	var result []model.Transaction
 	switch chainType {
 	case enum.ChainType_TRON:
 		tron, _ := GetTron()
-		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -296,7 +296,7 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*
 		return nil, 0, err
 	}
 	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.Nodes) < 1 {
+	if !ok || len(chainConfig.RpcNodes) < 1 {
 		return nil, 0, errors.New("no chain config")
 	}
 	var transaction model.Transaction
@@ -304,7 +304,7 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*
 	switch chainType {
 	case enum.ChainType_TRON:
 		tron, _ := GetTron()
-		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -342,14 +342,14 @@ func (Self *Chain) GetTransactionsByAddress(chainType enum.ChainType, address st
 		return nil, err
 	}
 	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.Nodes) < 1 {
+	if !ok || len(chainConfig.HttpNodes) < 1 {
 		return nil, errors.New("no chain config")
 	}
 	var transactions []model.Transaction
 	switch chainType {
 	case enum.ChainType_TRON:
 		tron, _ := GetTron()
-		transactions, err = tron.GetTronTransactionsByAddress(address, token, endTime)
+		transactions, err = tron.GetTronTransactionsByAddress(chainConfig.HttpNodes[0], address, token, endTime)
 		if err != nil {
 			return nil, err
 		}

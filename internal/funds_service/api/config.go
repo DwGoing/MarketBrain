@@ -96,7 +96,8 @@ func (Self *Config) LoadRpc(ctx context.Context, request *emptypb.Empty) (*confi
 	chainConfigs := make(map[string]*config_generated.ChainConfig)
 	for k, v := range configs.ChainConfigs {
 		chainConfigs[k] = &config_generated.ChainConfig{
-			Nodes: v.Nodes,
+			RpcNodes:  v.RpcNodes,
+			HttpNodes: v.HttpNodes,
 		}
 	}
 	return &config_generated.LoadResponse{

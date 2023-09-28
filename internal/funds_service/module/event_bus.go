@@ -224,7 +224,7 @@ func (Self *EventBus) checkTronNewTransaction() {
 		return
 	}
 	chainConfig, ok := config.ChainConfigs[enum.ChainType_TRON.String()]
-	if !ok || len(chainConfig.Nodes) < 1 {
+	if !ok {
 		zap.S().Errorf("no chain config")
 		return
 	}

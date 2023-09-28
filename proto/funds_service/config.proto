@@ -13,7 +13,8 @@ service Config {
 
 message ChainConfig {
     string usdt = 1; // USDT合约地址
-    repeated string nodes = 2; // 节点URL
+    repeated string rpcNodes = 2; // Rpc节点URL
+    repeated string httpNodes = 3; // Http节点URL
 }
 
 message SetRequest {

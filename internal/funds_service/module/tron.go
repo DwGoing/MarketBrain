@@ -32,16 +32,20 @@ type Tron struct{}
 // @title	获取Tron客户端
 // @param	Self	*Tron				模块实例
 // @param	nodes 	[]string			链配置
-// @param	apiKey 	string				ApiKey
+// @param	apiKeys []string			ApiKey集合
 // @return	_		*client.GrpcClient	客户端
 // @return	_		error				异常信息
-func (Self *Tron) GetTronClient(nodes []string, apiKey string) (*client.GrpcClient, error) {
+func (Self *Tron) GetTronRpcClient(nodes []string, apiKeys []string) (*client.GrpcClient, error) {
 	index, err := rand.Int(rand.Reader, big.NewInt(int64(len(nodes))))
 	if err != nil {
 		return nil, err
 	}
 	grpcClient := client.NewGrpcClient(nodes[index.Int64()])
-	err = grpcClient.SetAPIKey(apiKey)
+	index, err = rand.Int(rand.Reader, big.NewInt(int64(len(apiKeys))))
+	if err != nil {
+		return nil, err
+	}
+	err = grpcClient.SetAPIKey(apiKeys[index.Int64()])
 	if err != nil {
 		return nil, err
 	}
@@ -223,13 +227,13 @@ type GetTronTransactionsByAddressResponse_Trc20Transaction_TokenInfo struct {
 // @param	endTime		time.Time			结束时间
 // @return	_			[]model.Transaction	交易信息
 // @return	_			error				异常信息
-func (Self *Tron) GetTronTransactionsByAddress(address string, token *string, endTime time.Time) ([]model.Transaction, error) {
+func (Self *Tron) GetTronTransactionsByAddress(url string, address string, token *string, endTime time.Time) ([]model.Transaction, error) {
 	var transactions []model.Transaction
 	if token == nil {
 		// 未实现
 	} else {
-		url := fmt.Sprintf("https://nile.trongrid.io/v1/accounts/%s/transactions/trc20?only_confirmed=true&contract_address=%s&min_timestamp=%d",
-			address, *token, endTime.UnixMilli(),
+		url := fmt.Sprintf("%s/v1/accounts/%s/transactions/trc20?only_confirmed=true&contract_address=%s&min_timestamp=%d",
+			url, address, *token, endTime.UnixMilli(),
 		)
 		request, err := http.NewRequest("GET", url, nil)
 		if err != nil {

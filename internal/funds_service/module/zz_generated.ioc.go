@@ -249,15 +249,15 @@ func (t *treasury_) GetRechargeOrders(conditions string, conditionsParameters []
 }
 
 type tron_ struct {
-	GetTronClient_                 func(nodes []string, apiKey string) (*client.GrpcClient, error)
+	GetTronRpcClient_              func(nodes []string, apiKeys []string) (*client.GrpcClient, error)
 	SendTronTransaction_           func(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error)
 	DecodeTronTransaction_         func(client *client.GrpcClient, txHash string) (*model.Transaction, error)
 	GetTronTransactionsFromBlocks_ func(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
-	GetTronTransactionsByAddress_  func(address string, token *string, endTime timex.Time) ([]model.Transaction, error)
+	GetTronTransactionsByAddress_  func(url string, address string, token *string, endTime timex.Time) ([]model.Transaction, error)
 }
 
-func (t *tron_) GetTronClient(nodes []string, apiKey string) (*client.GrpcClient, error) {
-	return t.GetTronClient_(nodes, apiKey)
+func (t *tron_) GetTronRpcClient(nodes []string, apiKeys []string) (*client.GrpcClient, error) {
+	return t.GetTronRpcClient_(nodes, apiKeys)
 }
 
 func (t *tron_) SendTronTransaction(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error) {
@@ -272,8 +272,8 @@ func (t *tron_) GetTronTransactionsFromBlocks(client *client.GrpcClient, start i
 	return t.GetTronTransactionsFromBlocks_(client, start, end)
 }
 
-func (t *tron_) GetTronTransactionsByAddress(address string, token *string, endTime timex.Time) ([]model.Transaction, error) {
-	return t.GetTronTransactionsByAddress_(address, token, endTime)
+func (t *tron_) GetTronTransactionsByAddress(url string, address string, token *string, endTime timex.Time) ([]model.Transaction, error) {
+	return t.GetTronTransactionsByAddress_(url, address, token, endTime)
 }
 
 type ChainIOCInterface interface {
@@ -314,11 +314,11 @@ type TreasuryIOCInterface interface {
 }
 
 type TronIOCInterface interface {
-	GetTronClient(nodes []string, apiKey string) (*client.GrpcClient, error)
+	GetTronRpcClient(nodes []string, apiKeys []string) (*client.GrpcClient, error)
 	SendTronTransaction(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error)
 	DecodeTronTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error)
 	GetTronTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
-	GetTronTransactionsByAddress(address string, token *string, endTime timex.Time) ([]model.Transaction, error)
+	GetTronTransactionsByAddress(url string, address string, token *string, endTime timex.Time) ([]model.Transaction, error)
 }
 
 var _chainSDID string
