@@ -125,12 +125,18 @@ func main() {
 		zap.S().Errorf("%s", err)
 		os.Exit(1)
 	}
+	consoleCore := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(encoderConfig),
+		zapcore.AddSync(os.Stdout),
+		zap.DebugLevel,
+	)
+	fileCore := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(encoderConfig),
+		zapcore.AddSync(hook),
+		zap.InfoLevel,
+	)
 	logger := zap.New(
-		zapcore.NewCore(
-			zapcore.NewConsoleEncoder(encoderConfig),
-			zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(hook)),
-			zap.DebugLevel,
-		),
+		zapcore.NewTee(consoleCore, fileCore),
 		zap.AddCaller(),
 		zap.Development(),
 	)

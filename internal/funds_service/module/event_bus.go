@@ -7,6 +7,7 @@ import (
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
+	"github.com/ahmetb/go-linq"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
@@ -17,8 +18,6 @@ import (
 type EventBus struct {
 	crontab              *cron.Cron
 	walletCollectChannel chan model.WalletCollectionInfomation
-
-	currentHeights map[enum.ChainType]int64
 }
 
 // @title	构造函数
@@ -26,28 +25,12 @@ type EventBus struct {
 // @return _ 		*EventBus 	模块实例
 // @return _ 		error 		异常信息
 func NewEventBus(module *EventBus) (*EventBus, error) {
-	chainModule, err := GetChain()
-	if err != nil {
-		return nil, err
-	}
-	// 初始化区块高度
-	module.currentHeights = map[enum.ChainType]int64{
-		enum.ChainType_TRON: 0,
-	}
-	for k := range module.currentHeights {
-		height, err := chainModule.GetCurrentHeight(k)
-		if err != nil {
-			return nil, err
-		}
-		module.currentHeights[k] = height
-	}
-
 	module.crontab = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
-	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.checkRechargeOrderStatus)
+	_, err := module.crontab.AddFunc("*/10 * * * * ?", module.checkRechargeOrderStatus)
 	if err != nil {
 		return nil, err
 	}
-	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.checkNewTransaction)
+	_, err = module.crontab.AddFunc("*/10 * * * * ?", module.checkTronNewTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +165,7 @@ func (Self *EventBus) collectWallet() {
 
 // @title	交易监听
 // @param	Self	*EventBus	模块实例
-func (Self *EventBus) checkNewTransaction() {
+func (Self *EventBus) checkTronNewTransaction() {
 	storageModule, _ := GetStorage()
 	redisClient, err := storageModule.GetRedisClient()
 	if err != nil {
@@ -191,67 +174,100 @@ func (Self *EventBus) checkNewTransaction() {
 	}
 	defer redisClient.Close()
 	// 加锁
-	lock := "NEW_TRANSACTION_CHECKING"
+	lock := "NEW_TRON_TRANSACTION_CHECKING"
 	ok, err := redisClient.SetNX(context.Background(), lock, "", time.Duration(time.Minute*10)).Result()
 	if err != nil {
-		zap.S().Errorf("get NEW_TRANSACTION_CHECKING lock error: %s", err)
+		zap.S().Errorf("get %s lock error: %s", lock, err)
 		return
 	}
 	if !ok {
-		zap.S().Errorf("get NEW_TRANSACTION_CHECKING lock failed")
+		zap.S().Errorf("get %s lock failed", lock)
 		return
 	}
 	// 解锁
 	defer redisClient.Del(context.Background(), lock).Result()
-	zap.S().Debugf("start check new transaction")
-	chainModule, _ := GetChain()
 	treasury, _ := GetTreasury()
-	for k, v := range Self.currentHeights {
-		// 查询当前高度
-		height, err := chainModule.GetCurrentHeight(k)
-		if err != nil {
-			continue
-		}
-		start := v
-		var end int64
-		// 单次最多查询5个区块
-		if height-v > 5 {
-			end = height + 5
-		} else {
-			end = height
-		}
-		// 获取区块中代币交易
-		transactions, err := chainModule.GetTransactionFromBlocks(k, start, end)
-		if err != nil {
-			continue
-		}
-		// 查找匹配的订单
-		err = func() error {
+	// 查询所有UNPAID的订单
+	orders, err := treasury.GetRechargeOrders(
+		"`STATUS` = ?",
+		[]any{enum.RechargeStatus_UNPAID.String()},
+		10000, 1,
+	)
+	if err != nil {
+		zap.S().Errorf("get UNPAID order error: %s", err)
+		return
+	}
+	if len(orders) < 1 {
+		return
+	}
+	// 根据接收地址分组
+	groups := make(map[string][]model.RechargeOrderRecord)
+	linq.From(orders).GroupByT(
+		func(item model.RechargeOrderRecord) string {
+			return item.WalletAddress
+		}, func(item model.RechargeOrderRecord) model.RechargeOrderRecord {
+			return item
+		},
+	).ToMapByT(&groups, func(item linq.Group) string {
+		return item.Key.(string)
+	}, func(item linq.Group) []model.RechargeOrderRecord {
+		var values []model.RechargeOrderRecord
+		linq.From(item.Group).SelectT(func(item interface{}) model.RechargeOrderRecord {
+			return item.(model.RechargeOrderRecord)
+		}).ToSlice(&values)
+		return values
+	})
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		zap.S().Errorf("get config error: %s", err)
+		return
+	}
+	chainConfig, ok := config.ChainConfigs[enum.ChainType_TRON.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		zap.S().Errorf("no chain config")
+		return
+	}
+	for address, groupOrders := range groups {
+		go func(address string, orders []model.RechargeOrderRecord) {
+			// 查询近期交易
+			earliestTime := linq.From(orders).SelectT(func(item model.RechargeOrderRecord) time.Time {
+				return item.CreatedAt
+			}).OrderByT(func(item time.Time) int64 {
+				return item.UnixMilli()
+			}).First().(time.Time)
+			chainModule, _ := GetChain()
+			transactions, err := chainModule.GetTransactionsByAddress(enum.ChainType_TRON, address, &chainConfig.USDT, earliestTime)
+			if err != nil {
+				zap.S().Errorf("get transactions error: %s", err)
+				return
+			}
 			for _, transaction := range transactions {
-				orders, err := treasury.GetRechargeOrders(
-					"`CREATED_AT` <= ? AND `CHAIN_TYPE` = ? AND `AMOUNT` = ? AND `WALLET_ADDRESS` = ? AND `STATUS` = ?",
-					[]any{time.UnixMilli(transaction.TimeStamp), transaction.ChainType.String(), transaction.Amount, transaction.To, enum.RechargeStatus_UNPAID.String()},
-					1, 1,
+				// 查找匹配的订单
+				matchedOrders, err := treasury.GetRechargeOrders(
+					"`CREATED_AT` <= ? AND `CHAIN_TYPE` = ? AND `AMOUNT` = ? AND `WALLET_ADDRESS` = ? AND (`TX_HASH` IS NULL OR `TX_HASH` = '')",
+					[]any{time.UnixMilli(transaction.TimeStamp), transaction.ChainType.String(), transaction.Amount, transaction.To},
+					100, 1,
 				)
 				if err != nil {
-					return err
-				}
-				if len(orders) < 1 {
+					zap.S().Errorf("get order error: %s", err)
 					continue
 				}
-				order := orders[0]
+				if len(matchedOrders) < 1 {
+					continue
+				}
+				// 选择最早的订单
+				order := linq.From(matchedOrders).OrderByDescendingT(func(item model.RechargeOrderRecord) int64 {
+					return item.CreatedAt.UnixMilli()
+				}).First().(model.RechargeOrderRecord)
 				// 提交Hash等待验证
 				err = treasury.SubmitRechargeOrderTransaction(order.Id, transaction.Hash)
 				if err != nil {
-					return err
+					zap.S().Errorf("submit order transaction error: %s", err)
+					continue
 				}
+				zap.S().Infof("found matched order: %s ===> %s", order.Id, transaction.Hash)
 			}
-			return nil
-		}()
-		if err != nil {
-			zap.S().Errorf("order match error: %s", err)
-			continue
-		}
-		Self.currentHeights[k] = end
+		}(address, groupOrders)
 	}
 }

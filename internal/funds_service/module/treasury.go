@@ -206,8 +206,8 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 	}
 	// 检查交易状态
 	var wallet model.WalletCollectionInfomation
-	if strings.TrimSpace(rechargeOrder.TxHash) != "" {
-		tx, confirms, err := chain.DecodeTransaction(chainType, rechargeOrder.TxHash)
+	if rechargeOrder.TxHash != nil && strings.TrimSpace(*rechargeOrder.TxHash) != "" {
+		tx, confirms, err := chain.DecodeTransaction(chainType, *rechargeOrder.TxHash)
 		if err != nil {
 			zap.S().Errorf("decode transaction error: %s", err)
 			// 检查是否过期
@@ -225,9 +225,9 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 			}
 		}
 		if !tx.Result ||
-			tx.TimeStamp < rechargeOrder.CreatedAt.UnixMilli() ||
-			tx.Contract != &chainConfig.USDT ||
-			tx.From != rechargeOrder.WalletAddress ||
+			time.UnixMilli(tx.TimeStamp).Before(rechargeOrder.CreatedAt) ||
+			*tx.Contract != chainConfig.USDT ||
+			tx.To != rechargeOrder.WalletAddress ||
 			tx.Amount != rechargeOrder.Amount {
 			model.UpdateRechargeOrderRecords(client, model.UpdateOption{
 				Conditions:           "`ID` = ?",
