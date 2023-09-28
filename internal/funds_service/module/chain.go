@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"math/big"
+	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
@@ -209,6 +210,44 @@ func (Self *Chain) Transfer(chainType enum.ChainType, token *string, from *hd_wa
 	return txHash, err
 }
 
+// @title	查询块信息
+// @param	Self		*Chain				模块实例
+// @param	chainType	enum.ChainType		链类型
+// @param	height		int64				块高
+// @return	_			*model.Block		块信息
+// @return	_			error				异常信息
+func (Self *Chain) GetBlock(chainType enum.ChainType, height int64) (*model.Block, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return nil, errors.New("no chain config")
+	}
+	result := model.Block{
+		ChainType: chainType,
+	}
+	switch chainType {
+	case enum.ChainType_TRON:
+		tron, _ := GetTron()
+		client, err := tron.GetTronClient(chainConfig.Nodes, chainConfig.ApiKey)
+		if err != nil {
+			return nil, err
+		}
+		block, err := client.GetBlockByNum(height)
+		if err != nil {
+			return nil, err
+		}
+		result.Height = block.BlockHeader.RawData.Number
+		result.TimeStamp = block.BlockHeader.RawData.Timestamp
+	default:
+		return nil, errors.New("unsupported chain type")
+	}
+	return &result, nil
+}
+
 // @title	查询块中交易
 // @param	Self		*Chain				模块实例
 // @param	chainType	enum.ChainType		链类型
@@ -234,7 +273,7 @@ func (Self *Chain) GetTransactionFromBlocks(chainType enum.ChainType, start int6
 		if err != nil {
 			return nil, err
 		}
-		result, err = tron.GetTransactionsFromBlocks(client, start, end)
+		result, err = tron.GetTronTransactionsFromBlocks(client, start, end)
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +313,7 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*
 		if err != nil {
 			return nil, 0, err
 		}
-		tx, err := tron.DecodeTransaction(client, txHash)
+		tx, err := tron.DecodeTronTransaction(client, txHash)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -286,4 +325,38 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*
 		}
 	}
 	return &transaction, confirms, err
+}
+
+// @title	根据地址获取交易
+// @param	Self		*Tron				模块实例
+// @param	chainType	enum.ChainType		链类型
+// @param	address		string				地址
+// @param	token		*string				币种
+// @param	endTime		time.Time			结束时间
+// @return	_			[]model.Transaction	交易信息
+// @return	_			error				异常信息
+func (Self *Chain) GetTransactionsByAddress(chainType enum.ChainType, address string, token *string, endTime time.Time) ([]model.Transaction, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	chainConfig, ok := config.ChainConfigs[chainType.String()]
+	if !ok || len(chainConfig.Nodes) < 1 {
+		return nil, errors.New("no chain config")
+	}
+	var transactions []model.Transaction
+	switch chainType {
+	case enum.ChainType_TRON:
+		tron, _ := GetTron()
+		transactions, err = tron.GetTronTransactionsByAddress(address, token, endTime)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		if err != nil {
+			return nil, errors.New("unsupported chain type")
+		}
+	}
+	return transactions, nil
 }

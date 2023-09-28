@@ -21,7 +21,7 @@ type RechargeOrderRecord struct {
 	WalletAddress    string    `gorm:"column:WALLET_ADDRESS" mapstructure:"WALLET_ADDRESS"`
 	Status           string    `gorm:"column:STATUS" mapstructure:"STATUS"`
 	ExpireAt         time.Time `gorm:"column:EXPIRE_AT" mapstructure:"EXPIRE_AT"`
-	TxHash           string    `gorm:"column:TX_HASH" mapstructure:"TX_HASH"`
+	TxHash           *string   `gorm:"column:TX_HASH" mapstructure:"TX_HASH"`
 }
 
 func CreateRechargeOrderRecord(client *gorm.DB, record *RechargeOrderRecord) (*RechargeOrderRecord, error) {

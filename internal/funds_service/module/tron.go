@@ -4,14 +4,18 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
+	"net/http"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
+	"github.com/ahmetb/go-linq"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/fbsobreira/gotron-sdk/pkg/client"
 	"github.com/fbsobreira/gotron-sdk/pkg/common"
@@ -101,7 +105,7 @@ func (Self *Tron) SendTronTransaction(client *client.GrpcClient, privateKey *ecd
 // @param	txHash		string				交易Hash
 // @return	_			*model.Transaction	交易信息
 // @return	_			error				异常信息
-func (Self *Tron) DecodeTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error) {
+func (Self *Tron) DecodeTronTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error) {
 	result := model.Transaction{
 		ChainType: enum.ChainType_TRON,
 		Hash:      txHash,
@@ -174,7 +178,7 @@ func (Self *Tron) DecodeTransaction(client *client.GrpcClient, txHash string) (*
 // @param	end			int64					结束高度
 // @return	_			[]model.Transaction		交易信息
 // @return	_			error					异常信息
-func (Self *Tron) GetTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error) {
+func (Self *Tron) GetTronTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error) {
 	blocklist, err := client.GetBlockByLimitNext(start, end)
 	if err != nil {
 		return nil, err
@@ -184,7 +188,7 @@ func (Self *Tron) GetTransactionsFromBlocks(client *client.GrpcClient, start int
 	for _, block := range blocks {
 		transactions := block.GetTransactions()
 		for _, transaction := range transactions {
-			tx, err := Self.DecodeTransaction(client, common.Bytes2Hex(transaction.GetTxid()))
+			tx, err := Self.DecodeTronTransaction(client, common.Bytes2Hex(transaction.GetTxid()))
 			if err != nil {
 				continue
 			}
@@ -192,4 +196,74 @@ func (Self *Tron) GetTransactionsFromBlocks(client *client.GrpcClient, start int
 		}
 	}
 	return result, nil
+}
+
+type GetTronTransactionsByAddressResponse struct {
+	Data []GetTronTransactionsByAddressResponse_Trc20Transaction `json:"data"`
+}
+
+type GetTronTransactionsByAddressResponse_Trc20Transaction struct {
+	TransactionId  string                                                          `json:"transaction_id"`
+	BlockTimestamp int64                                                           `json:"block_timestamp"`
+	From           string                                                          `json:"from"`
+	To             string                                                          `json:"to"`
+	Value          string                                                          `json:"value"`
+	TokenInfo      GetTronTransactionsByAddressResponse_Trc20Transaction_TokenInfo `json:"token_info"`
+}
+
+type GetTronTransactionsByAddressResponse_Trc20Transaction_TokenInfo struct {
+	Address  string `json:"address"`
+	Decimals int64  `json:"decimals"`
+}
+
+// @title	根据地址获取交易
+// @param	Self		*Tron				模块实例
+// @param	address		string				地址
+// @param	token		*string				币种
+// @param	endTime		time.Time			结束时间
+// @return	_			[]model.Transaction	交易信息
+// @return	_			error				异常信息
+func (Self *Tron) GetTronTransactionsByAddress(address string, token *string, endTime time.Time) ([]model.Transaction, error) {
+	var transactions []model.Transaction
+	if token == nil {
+		// 未实现
+	} else {
+		url := fmt.Sprintf("https://nile.trongrid.io/v1/accounts/%s/transactions/trc20?only_confirmed=true&contract_address=%s&min_timestamp=%d",
+			address, *token, endTime.UnixMilli(),
+		)
+		request, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		request.Header.Add("accept", "application/json")
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			return nil, err
+		}
+		defer response.Body.Close()
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		var res GetTronTransactionsByAddressResponse
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			return nil, err
+		}
+		linq.From(res.Data).SelectT(func(item GetTronTransactionsByAddressResponse_Trc20Transaction) model.Transaction {
+			amountBitInt, _ := new(big.Int).SetString(item.Value, 10)
+			amount, _ := new(big.Float).Quo(new(big.Float).SetInt(amountBitInt), big.NewFloat(math.Pow10(int(item.TokenInfo.Decimals)))).Float64()
+			return model.Transaction{
+				ChainType: enum.ChainType_TRON,
+				Hash:      item.TransactionId,
+				TimeStamp: item.BlockTimestamp,
+				Contract:  &item.TokenInfo.Address,
+				From:      item.From,
+				To:        item.To,
+				Amount:    amount,
+				Result:    true,
+			}
+		}).ToSlice(&transactions)
+	}
+	return transactions, nil
 }
