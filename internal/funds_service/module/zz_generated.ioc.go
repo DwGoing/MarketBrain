@@ -140,8 +140,10 @@ type chain_ struct {
 	GetCurrentHeight_         func(chainType enum.ChainType) (int64, error)
 	GetBalance_               func(chainType enum.ChainType, contract *string, wallet string) (float64, error)
 	Transfer_                 func(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
+	GetBlock_                 func(chainType enum.ChainType, height int64) (*model.Block, error)
 	GetTransactionFromBlocks_ func(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error)
 	DecodeTransaction_        func(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error)
+	GetTransactionsByAddress_ func(chainType enum.ChainType, address string, token *string, endTime timex.Time) ([]model.Transaction, error)
 }
 
 func (c *chain_) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd_wallet.Account, error) {
@@ -160,12 +162,20 @@ func (c *chain_) Transfer(chainType enum.ChainType, token *string, from *hd_wall
 	return c.Transfer_(chainType, token, from, to, amount, remarks)
 }
 
+func (c *chain_) GetBlock(chainType enum.ChainType, height int64) (*model.Block, error) {
+	return c.GetBlock_(chainType, height)
+}
+
 func (c *chain_) GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error) {
 	return c.GetTransactionFromBlocks_(chainType, start, end)
 }
 
 func (c *chain_) DecodeTransaction(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error) {
 	return c.DecodeTransaction_(chainType, txHash)
+}
+
+func (c *chain_) GetTransactionsByAddress(chainType enum.ChainType, address string, token *string, endTime timex.Time) ([]model.Transaction, error) {
+	return c.GetTransactionsByAddress_(chainType, address, token, endTime)
 }
 
 type config_ struct {
@@ -239,10 +249,11 @@ func (t *treasury_) GetRechargeOrders(conditions string, conditionsParameters []
 }
 
 type tron_ struct {
-	GetTronClient_             func(nodes []string, apiKey string) (*client.GrpcClient, error)
-	SendTronTransaction_       func(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error)
-	DecodeTransaction_         func(client *client.GrpcClient, txHash string) (*model.Transaction, error)
-	GetTransactionsFromBlocks_ func(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
+	GetTronClient_                 func(nodes []string, apiKey string) (*client.GrpcClient, error)
+	SendTronTransaction_           func(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error)
+	DecodeTronTransaction_         func(client *client.GrpcClient, txHash string) (*model.Transaction, error)
+	GetTronTransactionsFromBlocks_ func(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
+	GetTronTransactionsByAddress_  func(address string, token *string, endTime timex.Time) ([]model.Transaction, error)
 }
 
 func (t *tron_) GetTronClient(nodes []string, apiKey string) (*client.GrpcClient, error) {
@@ -253,12 +264,16 @@ func (t *tron_) SendTronTransaction(client *client.GrpcClient, privateKey *ecdsa
 	return t.SendTronTransaction_(client, privateKey, tx, waitReceipt)
 }
 
-func (t *tron_) DecodeTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error) {
-	return t.DecodeTransaction_(client, txHash)
+func (t *tron_) DecodeTronTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error) {
+	return t.DecodeTronTransaction_(client, txHash)
 }
 
-func (t *tron_) GetTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error) {
-	return t.GetTransactionsFromBlocks_(client, start, end)
+func (t *tron_) GetTronTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error) {
+	return t.GetTronTransactionsFromBlocks_(client, start, end)
+}
+
+func (t *tron_) GetTronTransactionsByAddress(address string, token *string, endTime timex.Time) ([]model.Transaction, error) {
+	return t.GetTronTransactionsByAddress_(address, token, endTime)
 }
 
 type ChainIOCInterface interface {
@@ -266,8 +281,10 @@ type ChainIOCInterface interface {
 	GetCurrentHeight(chainType enum.ChainType) (int64, error)
 	GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error)
 	Transfer(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64, remarks string) (string, error)
+	GetBlock(chainType enum.ChainType, height int64) (*model.Block, error)
 	GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error)
 	DecodeTransaction(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error)
+	GetTransactionsByAddress(chainType enum.ChainType, address string, token *string, endTime timex.Time) ([]model.Transaction, error)
 }
 
 type ConfigIOCInterface interface {
@@ -299,8 +316,9 @@ type TreasuryIOCInterface interface {
 type TronIOCInterface interface {
 	GetTronClient(nodes []string, apiKey string) (*client.GrpcClient, error)
 	SendTronTransaction(client *client.GrpcClient, privateKey *ecdsa.PrivateKey, tx *core.Transaction, waitReceipt bool) (*core.TransactionInfo, error)
-	DecodeTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error)
-	GetTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
+	DecodeTronTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error)
+	GetTronTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error)
+	GetTronTransactionsByAddress(address string, token *string, endTime timex.Time) ([]model.Transaction, error)
 }
 
 var _chainSDID string
