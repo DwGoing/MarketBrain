@@ -1,6 +1,0 @@
-service:
-  rpc: 10080
-  http: 10081
-storage:
-  redis: redis://default:ayou1209@10.0.0.30:30356/0
-  mysql: dwgoing:ayou1209@tcp(10.0.0.30:30743)/MARKET_BRAIN?charset=utf8mb4&parseTime=True&loc=Local

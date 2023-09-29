@@ -1,11 +1,12 @@
-FROM golang:1.20-alpine
+FROM golang:1.20
 
 ENV GO111MODULE=on
 ENV GOPROXY=https://goproxy.cn,direct
 
-COPY ./bin  /
+COPY ./src  /
 WORKDIR /
+RUN go build -o MarketBrain main.go
 
-RUN MarketBrain service -t FUNDS
+ENTRYPOINT ["./MarketBrain", "service", "-t", "FUNDS"]
 
 EXPOSE 8080 8081
