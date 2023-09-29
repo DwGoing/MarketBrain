@@ -31,7 +31,7 @@ BEGIN;
 INSERT INTO `CONFIG` (`KEY`, `VALUE`)
 VALUES (
     'CHAIN_CONFIGS',
-    '{\"TRON\":{\"usdt\":\"TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj\",\"rpcNodes\":[\"grpc.nile.trongrid.io:50051\"],\"httpNodes\":[\"https://nile.trongrid.io\"],\"apiKeys\":[\"d9b77ec9-39e0-4765-98d8-2c59188344a0\"]}}'
+    '{\"TRON\":{\"usdt\":\"TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t\",\"rpcNodes\":[\"grpc.trongrid.io:50051\"],\"httpNodes\":[\"https://api.trongrid.io\"],\"apiKeys\":[\"d9b77ec9-39e0-4765-98d8-2c59188344a0\"]}}'
   );
 INSERT INTO `CONFIG` (`KEY`, `VALUE`)
 VALUES ('EXPIRE_TIME', '15');
