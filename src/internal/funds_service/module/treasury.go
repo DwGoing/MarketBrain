@@ -205,7 +205,11 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 		return nil, err
 	}
 	// 检查交易状态
-	var wallet model.WalletCollectionInfomation
+	wallet := model.WalletCollectionInfomation{
+		Index:     rechargeOrder.WalletIndex,
+		ChainType: chainType,
+		Address:   rechargeOrder.WalletAddress,
+	}
 	if rechargeOrder.TxHash != nil && strings.TrimSpace(*rechargeOrder.TxHash) != "" {
 		tx, confirms, err := chain.DecodeTransaction(chainType, *rechargeOrder.TxHash)
 		if err != nil {
@@ -286,10 +290,7 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 				},
 			})
 		}()
-		// 待归集
-		wallet.Index = rechargeOrder.WalletIndex
-		wallet.ChainType = chainType
-		wallet.Address = rechargeOrder.WalletAddress
+		return &wallet, nil
 	} else {
 		// 检查是否过期
 		if rechargeOrder.ExpireAt.Before(time.Now()) {
@@ -305,7 +306,7 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 			return &wallet, errors.New("order already expired")
 		}
 	}
-	return &wallet, nil
+	return nil, nil
 }
 
 // @title	检查充值订单状态
@@ -372,7 +373,9 @@ func (Self *Treasury) CheckRechargeOrdersStatus() ([]model.WalletCollectionInfom
 			zap.S().Errorf("check recharge order error: %s", err)
 			continue
 		}
-		wallets = append(wallets, *wallet)
+		if wallet != nil {
+			wallets = append(wallets, *wallet)
+		}
 	}
 	return wallets, nil
 }

@@ -1,20 +1,22 @@
 /*
  Navicat Premium Data Transfer
- 
+
  Source Server         : develop
  Source Server Type    : MySQL
- Source Server Version : 80033
- Source Host           : 10.0.0.30:30743
+ Source Server Version : 80033 (8.0.33)
+ Source Host           : dwgoing.cool:30743
  Source Schema         : MARKET_BRAIN
- 
+
  Target Server Type    : MySQL
- Target Server Version : 80033
+ Target Server Version : 80033 (8.0.33)
  File Encoding         : 65001
- 
- Date: 29/09/2023 02:43:44
- */
+
+ Date: 30/09/2023 23:21:08
+*/
+
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
 -- ----------------------------
 -- Table structure for CONFIG
 -- ----------------------------
@@ -23,30 +25,20 @@ CREATE TABLE `CONFIG` (
   `KEY` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
   `VALUE` text COLLATE utf8mb4_general_ci,
   PRIMARY KEY (`KEY`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- ----------------------------
 -- Records of CONFIG
 -- ----------------------------
 BEGIN;
-INSERT INTO `CONFIG` (`KEY`, `VALUE`)
-VALUES (
-    'CHAIN_CONFIGS',
-    '{\"TRON\":{\"usdt\":\"TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t\",\"rpcNodes\":[\"grpc.trongrid.io:50051\"],\"httpNodes\":[\"https://api.trongrid.io\"],\"apiKeys\":[\"d9b77ec9-39e0-4765-98d8-2c59188344a0\"]}}'
-  );
-INSERT INTO `CONFIG` (`KEY`, `VALUE`)
-VALUES ('EXPIRE_TIME', '15');
-INSERT INTO `CONFIG` (`KEY`, `VALUE`)
-VALUES ('MIN_GAS_THRESHOLD', '20');
-INSERT INTO `CONFIG` (`KEY`, `VALUE`)
-VALUES (
-    'MNEMONIC',
-    '\"math absorb sweet shrimp time smoke net pulp carbon gorilla expand payment\"'
-  );
-INSERT INTO `CONFIG` (`KEY`, `VALUE`)
-VALUES ('TRANSFER_GAS_AMOUNT', '50');
-INSERT INTO `CONFIG` (`KEY`, `VALUE`)
-VALUES ('WALLET_COLLECT_THRESHOLD', '50');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('CHAIN_CONFIGS', '{\"TRON\":{\"collectionTarget\":\"TRtmJpjDjQv6q4REaN9ZfybyTqjPsGsX7P\",\"usdt\":\"TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj\",\"rpcNodes\":[\"grpc.nile.trongrid.io:50051\"],\"httpNodes\":[\"https://nile.trongrid.io\"],\"apiKeys\":[\"d9b77ec9-39e0-4765-98d8-2c59188344a0\"]}}');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('EXPIRE_TIME', '15');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('MIN_GAS_THRESHOLD', '20');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('MNEMONIC', '\"math absorb sweet shrimp time smoke net pulp carbon gorilla expand payment\"');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('TRANSFER_GAS_AMOUNT', '50');
+INSERT INTO `CONFIG` (`KEY`, `VALUE`) VALUES ('WALLET_COLLECT_THRESHOLD', '10');
 COMMIT;
+
 -- ----------------------------
 -- Table structure for RECHARGE_ORDER
 -- ----------------------------
@@ -59,7 +51,7 @@ CREATE TABLE `RECHARGE_ORDER` (
   `EXTERNAL_DATA` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci,
   `CALLBACK_URL` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `CHAIN_TYPE` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `AMOUNT` decimal(64, 18) NOT NULL,
+  `AMOUNT` decimal(64,18) NOT NULL,
   `WALLET_INDEX` bigint NOT NULL,
   `WALLET_ADDRESS` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `STATUS` varchar(255) CHARACTER SET utf8mb3 NOT NULL,
@@ -68,12 +60,14 @@ CREATE TABLE `RECHARGE_ORDER` (
   PRIMARY KEY (`ID`) USING BTREE,
   KEY `INDEX_TX_HASH` (`TX_HASH`) USING BTREE,
   KEY `INDEX_EXTERNAL_IDENTITY` (`EXTERNAL_IDENTITY`) USING BTREE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 -- ----------------------------
 -- Records of RECHARGE_ORDER
 -- ----------------------------
 BEGIN;
 COMMIT;
+
 -- ----------------------------
 -- Table structure for TRANSFER
 -- ----------------------------
@@ -87,15 +81,17 @@ CREATE TABLE `TRANSFER` (
   `FROM_INDEX` bigint NOT NULL,
   `FROM_ADDRESS` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `TO` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `AMOUNT` decimal(64, 18) NOT NULL,
+  `AMOUNT` decimal(64,18) NOT NULL,
   `STATUS` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
   `ERROR` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci,
   `REMARKS` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`ID`) USING BTREE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
 -- ----------------------------
 -- Records of TRANSFER
 -- ----------------------------
 BEGIN;
 COMMIT;
+
 SET FOREIGN_KEY_CHECKS = 1;

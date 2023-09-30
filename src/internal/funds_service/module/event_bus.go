@@ -149,12 +149,12 @@ func (Self *EventBus) collectWallet() {
 				}
 				// 钱包归集
 				if balance >= config.WalletCollectionThreshold {
-					txHash, err := chainModule.Transfer(enum.ChainType_TRON, &chainConfig.USDT, account, mainAccount.GetAddress(), balance, "钱包归集")
+					txHash, err := chainModule.Transfer(enum.ChainType_TRON, &chainConfig.USDT, account, chainConfig.CollectionTarget, balance, "钱包归集")
 					if err != nil {
 						zap.S().Errorf("transfer usdt error: %s", err)
 						return
 					}
-					zap.S().Debugf("collect [%s] %s === %f ===> %s", txHash, wallet.Address, balance, mainAccount.GetAddress())
+					zap.S().Debugf("collect [%s] %s === %f ===> %s", txHash, wallet.Address, balance, chainConfig.CollectionTarget)
 				}
 			}(configModule, chainModule)
 		default:

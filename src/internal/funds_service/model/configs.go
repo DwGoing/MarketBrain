@@ -10,8 +10,9 @@ type Configs struct {
 }
 
 type ChainConfig struct {
-	USDT      string   `json:"usdt"`
-	RpcNodes  []string `json:"rpcNodes"`
-	HttpNodes []string `json:"httpNodes"`
-	ApiKeys   []string `json:"apiKeys"`
+	USDT             string   `json:"usdt"`
+	RpcNodes         []string `json:"rpcNodes"`
+	HttpNodes        []string `json:"httpNodes"`
+	ApiKeys          []string `json:"apiKeys"`
+	CollectionTarget string   `json:"collectionTarget"`
 }
