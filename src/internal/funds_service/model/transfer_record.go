@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"gorm.io/gorm"
 )
 
@@ -44,10 +43,8 @@ func UpdateTransferRecords(client *gorm.DB, opt UpdateOption) error {
 	if opt.Values == nil {
 		return nil
 	}
-	var record TransferRecord
-	mapstructure.Decode(opt.Values, &record)
-	record.UpdatedAt = time.Now()
-	result := client.Table("`TRANSFER`").Where(opt.Conditions, opt.ConditionsParameters...).Updates(record)
+	opt.Values["UPDATED_AT"] = time.Now()
+	result := client.Table("`TRANSFER`").Where(opt.Conditions, opt.ConditionsParameters...).Updates(opt.Values)
 	if result.Error != nil {
 		return result.Error
 	}
