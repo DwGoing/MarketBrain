@@ -253,34 +253,43 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 			},
 		})
 		// 发起回调
-		notifyStatus := enum.RechargeStatus_NOTIFY_OK
-		for retry := 0; retry < 5; retry++ {
-			time.Sleep(time.Minute * time.Duration(retry))
-			notifyModule, _ := GetNotify()
-			err = notifyModule.Send(rechargeOrder.CallbackUrl, rechargeOrder.ExternalData)
-			if err != nil {
-				notifyStatus = enum.RechargeStatus_NOTIFY_FAILED
-				zap.S().Errorf("notify error: %s", err)
-			} else {
-				notifyStatus = enum.RechargeStatus_NOTIFY_OK
-				break
+		go func() {
+			notifyStatus := enum.RechargeStatus_NOTIFY_OK
+			for retry := 0; retry < 5; retry++ {
+				time.Sleep(time.Minute * time.Duration(retry))
+				notifyModule, _ := GetNotify()
+				err = notifyModule.Send(rechargeOrder.CallbackUrl, rechargeOrder.ExternalData)
+				if err != nil {
+					notifyStatus = enum.RechargeStatus_NOTIFY_FAILED
+					zap.S().Errorf("notify error: %s", err)
+				} else {
+					notifyStatus = enum.RechargeStatus_NOTIFY_OK
+					break
+				}
 			}
-		}
-		// 更新订单状态
-		model.UpdateRechargeOrderRecords(client, model.UpdateOption{
-			Conditions:           "`ID` = ?",
-			ConditionsParameters: []any{rechargeOrder.Id},
-			Values: map[string]any{
-				"STATUS": notifyStatus.String(),
-			},
-		})
+			storageModule, _ := GetStorage()
+			mysqlClient, err := storageModule.GetMysqlClient()
+			if err != nil {
+				return
+			}
+			db, err := mysqlClient.DB()
+			if err != nil {
+				return
+			}
+			defer db.Close()
+			// 更新订单状态
+			model.UpdateRechargeOrderRecords(mysqlClient, model.UpdateOption{
+				Conditions:           "`ID` = ?",
+				ConditionsParameters: []any{rechargeOrder.Id},
+				Values: map[string]any{
+					"STATUS": notifyStatus.String(),
+				},
+			})
+		}()
 		// 待归集
-		wallet = model.WalletCollectionInfomation{
-			Index:     rechargeOrder.WalletIndex,
-			ChainType: chainType,
-			Address:   rechargeOrder.WalletAddress,
-			Status:    notifyStatus,
-		}
+		wallet.Index = rechargeOrder.WalletIndex
+		wallet.ChainType = chainType
+		wallet.Address = rechargeOrder.WalletAddress
 	} else {
 		// 检查是否过期
 		if rechargeOrder.ExpireAt.Before(time.Now()) {
