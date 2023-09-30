@@ -6,7 +6,6 @@ import (
 
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
 	"gorm.io/gorm"
 )
 
@@ -62,10 +61,8 @@ func UpdateRechargeOrderRecords(client *gorm.DB, opt UpdateOption) error {
 	if opt.Values == nil {
 		return nil
 	}
-	var record RechargeOrderRecord
-	mapstructure.Decode(opt.Values, &record)
-	record.UpdatedAt = time.Now()
-	result := client.Table("RECHARGE_ORDER").Where(opt.Conditions, opt.ConditionsParameters...).Updates(record)
+	opt.Values["UPDATED_AT"] = time.Now()
+	result := client.Table("RECHARGE_ORDER").Where(opt.Conditions, opt.ConditionsParameters...).Updates(opt.Values)
 	if result.Error != nil {
 		return result.Error
 	}
