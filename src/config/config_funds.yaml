@@ -2,5 +2,5 @@ service:
   rpc: 8080
   http: 8081
 storage:
-  redis: redis://default:ayou1209@dwgoing.cool:30356/0
-  mysql: dwgoing:ayou1209@tcp(dwgoing.cool:30743)/MARKET_BRAIN?charset=utf8mb4&parseTime=True&loc=Local
+  redis: redis://default:ayou1209@10.0.0.30:30356/0
+  mysql: dwgoing:ayou1209@tcp(10.0.0.30:30743)/MARKET_BRAIN?charset=utf8mb4&parseTime=True&loc=Local

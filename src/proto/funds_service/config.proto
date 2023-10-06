@@ -3,6 +3,7 @@ syntax = "proto3";
 option go_package = "./;config_generated";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/any.proto";
 
 service Config {
     // 更新配置
@@ -11,18 +12,28 @@ service Config {
     rpc LoadRpc (google.protobuf.Empty) returns (LoadResponse) {}
 }
 
-message ChainConfig {
-    string usdt = 1; // USDT合约地址
-    repeated string rpcNodes = 2; // Rpc节点URL
-    repeated string httpNodes = 3; // Http节点URL
+message Chain {
+    message Tron {
+        repeated string rpcNodes = 1;
+        repeated string httpNodes = 2;
+        repeated string apiKeys = 3;
+    }
 }
 
 message SetRequest {
-    optional string mnemonic = 1; // 助记词
-    map<string, ChainConfig> chainConfigs = 2; // 链相关配置
+    map<string, google.protobuf.Any> chains = 1;
+    optional int64 expireTime = 2;
+    optional string mnemonic = 3;
+    optional int64 walletCollectionThreshold = 4;
+    optional int64 minGasThreshold = 5;
+    optional int64 transferGasAmount = 6;
 }
 
 message LoadResponse {
-    string mnemonic = 1; // 助记词
-    map<string, ChainConfig> chainConfigs = 2; // 链相关配置
+    map<string, google.protobuf.Any> chains = 1;
+    int64 expireTime = 2;
+    string mnemonic = 3;
+    double walletCollectionThreshold = 4;
+    double minGasThreshold = 5;
+    double transferGasAmount = 6;
 }

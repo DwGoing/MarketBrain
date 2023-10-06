@@ -2,6 +2,7 @@ package module
 
 import (
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
+	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/ahmetb/go-linq"
 	"github.com/mitchellh/mapstructure"
 )
@@ -58,13 +59,34 @@ func (Self *Config) Load() (*model.Configs, error) {
 	if err != nil {
 		return nil, err
 	}
-	configMap := map[string]any{}
+	configMap := make(map[string]any)
 	linq.From(configRecords).ToMapByT(&configMap, func(item model.ConfigRecord) string {
 		return item.Key
 	}, func(item model.ConfigRecord) any {
 		return item.Value
 	})
-	var configs *model.Configs
-	mapstructure.Decode(configMap, &configs)
-	return configs, nil
+	var configs model.Configs
+	err = mapstructure.Decode(configMap, &configs)
+	if err != nil {
+		return nil, err
+	}
+	// 解析Chains
+	for k, v := range configs.Chains {
+		chainType, err := new(enum.ChainType).Parse(k)
+		if err != nil {
+			continue
+		}
+		switch chainType {
+		case enum.ChainType_Tron:
+			var chain model.Chain_Tron
+			err := mapstructure.Decode(v, &chain)
+			if err != nil {
+				continue
+			}
+			configs.Chains[k] = chain
+		default:
+			continue
+		}
+	}
+	return &configs, nil
 }

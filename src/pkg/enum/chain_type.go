@@ -5,12 +5,12 @@ import "errors"
 type ChainType uint8
 
 const (
-	ChainType_TRON ChainType = 1
+	ChainType_Tron ChainType = 1
 )
 
 func (e ChainType) String() string {
 	switch e {
-	case ChainType_TRON:
+	case ChainType_Tron:
 		return "TRON"
 	default:
 		return "UNKNOWN"
@@ -20,7 +20,7 @@ func (e ChainType) String() string {
 func (e ChainType) Parse(str string) (ChainType, error) {
 	switch str {
 	case "TRON":
-		return ChainType_TRON, nil
+		return ChainType_Tron, nil
 	default:
 		return 0, errors.New("unknown type")
 	}

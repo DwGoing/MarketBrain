@@ -9,6 +9,8 @@ import (
 	"github.com/DwGoing/MarketBrain/internal/funds_service/static/Response"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/mapstructure"
+	"google.golang.org/protobuf/types/known/anypb"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -26,17 +28,45 @@ type Config struct {
 // @return	_			error							异常信息
 func (Self *Config) SetRpc(ctx context.Context, request *config_generated.SetRequest) (*emptypb.Empty, error) {
 	configs := make(map[string]any)
-	if request.Mnemonic != nil {
-		configs["MNEMONIC"] = request.Mnemonic
-	}
-	if request.ChainConfigs != nil {
-		for k := range request.ChainConfigs {
-			_, err := new(enum.ChainType).Parse(k)
+	if request.Chains != nil {
+		chains := make(map[string]any)
+		for k, v := range request.Chains {
+			chainType, err := new(enum.ChainType).Parse(k)
 			if err != nil {
 				continue
 			}
+			switch chainType {
+			case enum.ChainType_Tron:
+				chainValue, err := v.UnmarshalNew()
+				if err != nil {
+					continue
+				}
+				chain := chainValue.(*config_generated.Chain_Tron)
+				chains[k] = model.Chain_Tron{
+					RpcNodes:  chain.RpcNodes,
+					HttpNodes: chain.HttpNodes,
+					ApiKeys:   chain.ApiKeys,
+				}
+			default:
+				continue
+			}
 		}
-		configs["CHAIN_CONFIGS"] = request.ChainConfigs
+		configs["CHAINS"] = chains
+	}
+	if request.ExpireTime != nil {
+		configs["EXPIRE_TIME"] = request.ExpireTime
+	}
+	if request.Mnemonic != nil {
+		configs["MNEMONIC"] = request.Mnemonic
+	}
+	if request.WalletCollectionThreshold != nil {
+		configs["WALLET_COLLECT_THRESHOLD"] = request.WalletCollectionThreshold
+	}
+	if request.MinGasThreshold != nil {
+		configs["MIN_GAS_THRESHOLD"] = request.MinGasThreshold
+	}
+	if request.TransferGasAmount != nil {
+		configs["TRANSFER_GAS_AMOUNT"] = request.TransferGasAmount
 	}
 	configModule, _ := module.GetConfig()
 	err := configModule.Set(configs)
@@ -47,8 +77,12 @@ func (Self *Config) SetRpc(ctx context.Context, request *config_generated.SetReq
 }
 
 type SetRequest struct {
-	Mnemonic     *string                      `json:"mnemonic"`
-	ChainConfigs map[string]model.ChainConfig `json:"chainConfigs"`
+	Chains                    map[string]any `json:"chains"`
+	ExpireTime                *int64         `json:"expireTime"`
+	Mnemonic                  *string        `json:"mnemonic"`
+	WalletCollectionThreshold *float64       `json:"walletCollectionThreshold"`
+	MinGasThreshold           *float64       `json:"minGasThreshold"`
+	TransferGasAmount         *float64       `json:"transferGasAmount"`
 }
 
 // @title	更新配置
@@ -61,17 +95,41 @@ func SetApi(ctx *gin.Context) {
 		Response.Fail(ctx, enum.ApiErrorType_RequestBindError, err)
 	}
 	configs := make(map[string]any)
-	if request.Mnemonic != nil {
-		configs["MNEMONIC"] = request.Mnemonic
-	}
-	if request.ChainConfigs != nil {
-		for k := range request.ChainConfigs {
-			_, err := new(enum.ChainType).Parse(k)
+	if request.Chains != nil {
+		chains := make(map[string]any)
+		for k, v := range request.Chains {
+			chainType, err := new(enum.ChainType).Parse(k)
 			if err != nil {
 				continue
 			}
+			switch chainType {
+			case enum.ChainType_Tron:
+				var chain model.Chain_Tron
+				err := mapstructure.Decode(v, &chain)
+				if err != nil {
+					continue
+				}
+				chains[k] = chain
+			default:
+				continue
+			}
 		}
-		configs["CHAIN_CONFIGS"] = request.ChainConfigs
+		configs["CHAINS"] = chains
+	}
+	if request.ExpireTime != nil {
+		configs["EXPIRE_TIME"] = request.ExpireTime
+	}
+	if request.Mnemonic != nil {
+		configs["MNEMONIC"] = request.Mnemonic
+	}
+	if request.WalletCollectionThreshold != nil {
+		configs["WALLET_COLLECT_THRESHOLD"] = request.WalletCollectionThreshold
+	}
+	if request.MinGasThreshold != nil {
+		configs["MIN_GAS_THRESHOLD"] = request.MinGasThreshold
+	}
+	if request.TransferGasAmount != nil {
+		configs["TRANSFER_GAS_AMOUNT"] = request.TransferGasAmount
 	}
 	configModule, _ := module.GetConfig()
 	err = configModule.Set(configs)
@@ -93,16 +151,31 @@ func (Self *Config) LoadRpc(ctx context.Context, request *emptypb.Empty) (*confi
 	if err != nil {
 		return nil, err
 	}
-	chainConfigs := make(map[string]*config_generated.ChainConfig)
-	for k, v := range configs.ChainConfigs {
-		chainConfigs[k] = &config_generated.ChainConfig{
-			RpcNodes:  v.RpcNodes,
-			HttpNodes: v.HttpNodes,
+	chains := make(map[string]*anypb.Any)
+	for k, v := range configs.Chains {
+		chainType, err := new(enum.ChainType).Parse(k)
+		if err != nil {
+			continue
+		}
+		switch chainType {
+		case enum.ChainType_Tron:
+			chain := v.(model.Chain_Tron)
+			chains[k], _ = anypb.New(&config_generated.Chain_Tron{
+				RpcNodes:  chain.RpcNodes,
+				HttpNodes: chain.HttpNodes,
+				ApiKeys:   chain.ApiKeys,
+			})
+		default:
+			continue
 		}
 	}
 	return &config_generated.LoadResponse{
-		Mnemonic:     configs.Mnemonic,
-		ChainConfigs: chainConfigs,
+		Chains:                    chains,
+		ExpireTime:                configs.ExpireTime,
+		Mnemonic:                  configs.Mnemonic,
+		WalletCollectionThreshold: configs.WalletCollectionThreshold,
+		MinGasThreshold:           configs.MinGasThreshold,
+		TransferGasAmount:         configs.TransferGasAmount,
 	}, nil
 }
 
