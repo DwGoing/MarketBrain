@@ -68,6 +68,12 @@ func (Self *Config) SetRpc(ctx context.Context, request *config_generated.SetReq
 	if request.TransferGasAmount != nil {
 		configs["TRANSFER_GAS_AMOUNT"] = request.TransferGasAmount
 	}
+	if request.CollectWallets != nil {
+		configs["COLLECT_WALLETS"] = request.CollectWallets
+	}
+	if request.PaymentCurrencies != nil {
+		configs["PAYMENT_CURRENCIES"] = request.PaymentCurrencies
+	}
 	configModule, _ := module.GetConfig()
 	err := configModule.Set(configs)
 	if err != nil {
@@ -77,12 +83,14 @@ func (Self *Config) SetRpc(ctx context.Context, request *config_generated.SetReq
 }
 
 type SetRequest struct {
-	Chains                    map[string]any `json:"chains"`
-	ExpireTime                *int64         `json:"expireTime"`
-	Mnemonic                  *string        `json:"mnemonic"`
-	WalletCollectionThreshold *float64       `json:"walletCollectionThreshold"`
-	MinGasThreshold           *float64       `json:"minGasThreshold"`
-	TransferGasAmount         *float64       `json:"transferGasAmount"`
+	Chains                    map[string]any    `json:"chains"`
+	ExpireTime                *int64            `json:"expireTime"`
+	Mnemonic                  *string           `json:"mnemonic"`
+	WalletCollectionThreshold *float64          `json:"walletCollectionThreshold"`
+	MinGasThreshold           *float64          `json:"minGasThreshold"`
+	TransferGasAmount         *float64          `json:"transferGasAmount"`
+	CollectWallets            map[string]string `json:"collectWallets"`
+	PaymentCurrencies         map[string]string `json:"paymentCurrencies"`
 }
 
 // @title	更新配置
@@ -131,6 +139,12 @@ func SetApi(ctx *gin.Context) {
 	if request.TransferGasAmount != nil {
 		configs["TRANSFER_GAS_AMOUNT"] = request.TransferGasAmount
 	}
+	if request.CollectWallets != nil {
+		configs["COLLECT_WALLETS"] = request.CollectWallets
+	}
+	if request.PaymentCurrencies != nil {
+		configs["PAYMENT_CURRENCIES"] = request.PaymentCurrencies
+	}
 	configModule, _ := module.GetConfig()
 	err = configModule.Set(configs)
 	if err != nil {
@@ -176,6 +190,8 @@ func (Self *Config) LoadRpc(ctx context.Context, request *emptypb.Empty) (*confi
 		WalletCollectionThreshold: configs.WalletCollectionThreshold,
 		MinGasThreshold:           configs.MinGasThreshold,
 		TransferGasAmount:         configs.TransferGasAmount,
+		CollectWallets:            configs.CollectWallets,
+		PaymentCurrencies:         configs.PaymentCurrencies,
 	}, nil
 }
 

@@ -27,6 +27,8 @@ message SetRequest {
     optional int64 walletCollectionThreshold = 4;
     optional int64 minGasThreshold = 5;
     optional int64 transferGasAmount = 6;
+    map<string, string> collectWallets = 7;
+    map<string, string> paymentCurrencies = 8;
 }
 
 message LoadResponse {
@@ -36,4 +38,6 @@ message LoadResponse {
     double walletCollectionThreshold = 4;
     double minGasThreshold = 5;
     double transferGasAmount = 6;
+    map<string, string> collectWallets = 7;
+    map<string, string> paymentCurrencies = 8;
 }
