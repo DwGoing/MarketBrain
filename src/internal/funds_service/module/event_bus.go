@@ -97,18 +97,19 @@ func (Self *EventBus) collectWallet() {
 					zap.S().Errorf("get config error: %s", err)
 					return
 				}
+				_ = config
 				// 验证钱包是否为当前子钱包
 				var currency hd_wallet.Currency
-				var chainConfig model.ChainConfig
+				// var chainConfig model.Chain
 				switch wallet.ChainType {
-				case enum.ChainType_TRON:
-					config, ok := config.ChainConfigs[wallet.ChainType.String()]
-					if !ok {
-						zap.S().Errorf("no chain config")
-						return
-					}
-					currency = hd_wallet.Currency_TRON
-					chainConfig = config
+				case enum.ChainType_Tron:
+					// config, ok := config.ChainConfigs[wallet.ChainType.String()]
+					// if !ok {
+					// 	zap.S().Errorf("no chain config")
+					// 	return
+					// }
+					// currency = hd_wallet.Currency_TRON
+					// chainConfig = config
 				default:
 					return
 				}
@@ -128,34 +129,36 @@ func (Self *EventBus) collectWallet() {
 					zap.S().Errorf("get gas balance error: %s", err)
 					return
 				}
+				_ = gasBalance
 				mainAccount, err := chainModule.GetAccount(currency, 0)
 				if err != nil {
 					zap.S().Errorf("get account error: %s", err)
 					return
 				}
+				_ = mainAccount
 				// 补充Gas
-				if gasBalance < config.MinGasThreshold {
-					_, err = chainModule.Transfer(enum.ChainType_TRON, nil, mainAccount, wallet.Address, config.TransferGasAmount, "补充Gas")
-					if err != nil {
-						zap.S().Errorf("transfer gas error: %s", err)
-						return
-					}
-				}
+				// if gasBalance < config.MinGasThreshold {
+				// 	_, err = chainModule.Transfer(enum.ChainType_Tron, nil, mainAccount, wallet.Address, config.TransferGasAmount, "补充Gas")
+				// 	if err != nil {
+				// 		zap.S().Errorf("transfer gas error: %s", err)
+				// 		return
+				// 	}
+				// }
 				// 检查余额
-				balance, err := chainModule.GetBalance(wallet.ChainType, &chainConfig.USDT, wallet.Address)
-				if err != nil {
-					zap.S().Errorf("get balance error: %s", err)
-					return
-				}
+				// balance, err := chainModule.GetBalance(wallet.ChainType, &chainConfig.USDT, wallet.Address)
+				// if err != nil {
+				// 	zap.S().Errorf("get balance error: %s", err)
+				// 	return
+				// }
 				// 钱包归集
-				if balance >= config.WalletCollectionThreshold {
-					txHash, err := chainModule.Transfer(enum.ChainType_TRON, &chainConfig.USDT, account, chainConfig.CollectionTarget, balance, "钱包归集")
-					if err != nil {
-						zap.S().Errorf("transfer usdt error: %s", err)
-						return
-					}
-					zap.S().Debugf("collect [%s] %s === %f ===> %s", txHash, wallet.Address, balance, chainConfig.CollectionTarget)
-				}
+				// if balance >= config.WalletCollectionThreshold {
+				// 	txHash, err := chainModule.Transfer(enum.ChainType_Tron, &chainConfig.USDT, account, chainConfig.CollectionTarget, balance, "钱包归集")
+				// 	if err != nil {
+				// 		zap.S().Errorf("transfer usdt error: %s", err)
+				// 		return
+				// 	}
+				// 	zap.S().Debugf("collect [%s] %s === %f ===> %s", txHash, wallet.Address, balance, chainConfig.CollectionTarget)
+				// }
 			}(configModule, chainModule)
 		default:
 			time.Sleep(time.Second * 5)
@@ -217,17 +220,17 @@ func (Self *EventBus) checkTronNewTransaction() {
 		}).ToSlice(&values)
 		return values
 	})
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		zap.S().Errorf("get config error: %s", err)
-		return
-	}
-	chainConfig, ok := config.ChainConfigs[enum.ChainType_TRON.String()]
-	if !ok {
-		zap.S().Errorf("no chain config")
-		return
-	}
+	// configModule, _ := GetConfig()
+	// config, err := configModule.Load()
+	// if err != nil {
+	// 	zap.S().Errorf("get config error: %s", err)
+	// 	return
+	// }
+	// chainConfig, ok := config.ChainConfigs[enum.ChainType_Tron.String()]
+	// if !ok {
+	// 	zap.S().Errorf("no chain config")
+	// 	return
+	// }
 	for address, groupOrders := range groups {
 		go func(address string, orders []model.RechargeOrderRecord) {
 			// 查询近期交易
@@ -237,7 +240,12 @@ func (Self *EventBus) checkTronNewTransaction() {
 				return item.UnixMilli()
 			}).First().(time.Time)
 			chainModule, _ := GetChain()
-			transactions, err := chainModule.GetTransactionsByAddress(enum.ChainType_TRON, address, &chainConfig.USDT, earliestTime)
+
+			var transactions []model.Transaction
+			_ = earliestTime
+			_ = chainModule
+
+			// transactions, err := chainModule.GetTransactionsByAddress(enum.ChainType_Tron, address, &chainConfig.USDT, earliestTime)
 			if err != nil {
 				zap.S().Errorf("get transactions error: %s", err)
 				return

@@ -2,15 +2,11 @@ package module
 
 import (
 	"errors"
-	"math"
-	"math/big"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
 	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
-	"github.com/fbsobreira/gotron-sdk/pkg/common"
-	"github.com/fbsobreira/gotron-sdk/pkg/proto/api"
 )
 
 // +ioc:autowire=true
@@ -46,28 +42,15 @@ func (Self *Chain) GetAccount(currencyType hd_wallet.Currency, index int64) (*hd
 // @return	_			int64			交易信息
 // @return	_			error			异常信息
 func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		return 0, err
-	}
-	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.RpcNodes) < 1 {
-		return 0, errors.New("no chain config")
-	}
 	var height int64
 	switch chainType {
-	case enum.ChainType_TRON:
+	case enum.ChainType_Tron:
 		tron, _ := GetTron()
-		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
+		h, err := tron.GetCurrentHeight()
 		if err != nil {
 			return 0, err
 		}
-		block, err := client.GetNowBlock()
-		if err != nil {
-			return 0, err
-		}
-		height = block.BlockHeader.RawData.Number
+		height = h
 	default:
 		return 0, errors.New("unsupported chain type")
 	}
@@ -77,45 +60,20 @@ func (Self *Chain) GetCurrentHeight(chainType enum.ChainType) (int64, error) {
 // @title	获取钱包余额
 // @param	Self		*Chain			模块实例
 // @param	chainType	enum.ChainType	链类型
-// @param	contract	*string			合约地址
-// @param	wallet		string			钱包地址
+// @param	token	*string			合约地址
+// @param	address		string			钱包地址
 // @return	_			float64			余额
 // @return	_			error			异常信息
-func (Self *Chain) GetBalance(chainType enum.ChainType, contract *string, wallet string) (float64, error) {
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		return 0, err
-	}
-	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.RpcNodes) < 1 {
-		return 0, errors.New("no chain config")
-	}
+func (Self *Chain) GetBalance(chainType enum.ChainType, token *string, address string) (float64, error) {
 	var balance float64
 	switch chainType {
-	case enum.ChainType_TRON:
+	case enum.ChainType_Tron:
 		tron, _ := GetTron()
-		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
+		b, err := tron.GetBalance(token, address)
 		if err != nil {
 			return 0, err
 		}
-		if contract == nil {
-			account, err := client.GetAccount(wallet)
-			if err != nil {
-				return 0, err
-			}
-			balance, _ = new(big.Float).Quo(new(big.Float).SetInt64(account.Balance), big.NewFloat(1e6)).Float64()
-		} else {
-			balanceBigInt, err := client.TRC20ContractBalance(wallet, *contract)
-			if err != nil {
-				return 0, err
-			}
-			decimalsBigInt, err := client.TRC20GetDecimals(*contract)
-			if err != nil {
-				return 0, err
-			}
-			balance, _ = new(big.Float).Quo(new(big.Float).SetInt(balanceBigInt), big.NewFloat(math.Pow10(int(decimalsBigInt.Int64())))).Float64()
-		}
+		balance = b
 	default:
 		return 0, errors.New("unsupported chain type")
 	}
@@ -143,46 +101,15 @@ func (Self *Chain) Transfer(chainType enum.ChainType, token *string, from *hd_wa
 	}
 	defer db.Close()
 	txHash, err := func(chainType enum.ChainType, token *string, from *hd_wallet.Account, to string, amount float64) (string, error) {
-		configModule, _ := GetConfig()
-		config, err := configModule.Load()
-		if err != nil {
-			return "", err
-		}
-		chainConfig, ok := config.ChainConfigs[chainType.String()]
-		if !ok || len(chainConfig.RpcNodes) < 1 {
-			return "", errors.New("no chain config")
-		}
 		var txHash string
 		switch chainType {
-		case enum.ChainType_TRON:
+		case enum.ChainType_Tron:
 			tron, _ := GetTron()
-			client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
+			hash, err := tron.Transfer(token, from, to, amount)
 			if err != nil {
 				return "", err
 			}
-			var tx *api.TransactionExtention
-			if token == nil {
-				amountInt64, _ := new(big.Float).Mul(big.NewFloat(amount), big.NewFloat(1e6)).Int64()
-				tx, err = client.Transfer(from.GetAddress(), to, amountInt64)
-				if err != nil {
-					return "", err
-				}
-			} else {
-				decimalsBigInt, err := client.TRC20GetDecimals(*token)
-				if err != nil {
-					return "", err
-				}
-				amountBigInt, _ := new(big.Float).Mul(big.NewFloat(amount), big.NewFloat(math.Pow10(int(decimalsBigInt.Int64())))).Int(new(big.Int))
-				tx, err = client.TRC20Send(from.GetAddress(), to, *token, amountBigInt, 300000000)
-				if err != nil {
-					return "", err
-				}
-			}
-			txInfo, err := tron.SendTronTransaction(client, from.PrivateKey.ToECDSA(), tx.Transaction, true)
-			if err != nil {
-				return "", err
-			}
-			txHash = common.Bytes2Hex(txInfo.GetId())
+			txHash = hash
 		default:
 			return "", errors.New("unsupported chain type")
 		}
@@ -213,35 +140,19 @@ func (Self *Chain) Transfer(chainType enum.ChainType, token *string, from *hd_wa
 // @title	查询块信息
 // @param	Self		*Chain				模块实例
 // @param	chainType	enum.ChainType		链类型
-// @param	height		int64				块高
+// @param	number		int64				块高
 // @return	_			*model.Block		块信息
 // @return	_			error				异常信息
-func (Self *Chain) GetBlock(chainType enum.ChainType, height int64) (*model.Block, error) {
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		return nil, err
-	}
-	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.RpcNodes) < 1 {
-		return nil, errors.New("no chain config")
-	}
-	result := model.Block{
-		ChainType: chainType,
-	}
+func (Self *Chain) GetBlock(chainType enum.ChainType, number int64) (*model.Block, error) {
+	var result model.Block
 	switch chainType {
-	case enum.ChainType_TRON:
+	case enum.ChainType_Tron:
 		tron, _ := GetTron()
-		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
+		block, err := tron.GetBlockByNumber(number)
 		if err != nil {
 			return nil, err
 		}
-		block, err := client.GetBlockByNum(height)
-		if err != nil {
-			return nil, err
-		}
-		result.Height = block.BlockHeader.RawData.Number
-		result.TimeStamp = block.BlockHeader.RawData.Timestamp
+		result = *block
 	default:
 		return nil, errors.New("unsupported chain type")
 	}
@@ -256,27 +167,15 @@ func (Self *Chain) GetBlock(chainType enum.ChainType, height int64) (*model.Bloc
 // @return	_			[]model.Transaction	异常信息
 // @return	_			error				异常信息
 func (Self *Chain) GetTransactionFromBlocks(chainType enum.ChainType, start int64, end int64) ([]model.Transaction, error) {
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		return nil, err
-	}
-	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.RpcNodes) < 1 {
-		return nil, errors.New("no chain config")
-	}
 	var result []model.Transaction
 	switch chainType {
-	case enum.ChainType_TRON:
+	case enum.ChainType_Tron:
 		tron, _ := GetTron()
-		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
+		transactions, err := tron.GetTronTransactionsFromBlocks(start, end)
 		if err != nil {
 			return nil, err
 		}
-		result, err = tron.GetTronTransactionsFromBlocks(client, start, end)
-		if err != nil {
-			return nil, err
-		}
+		result = transactions
 	default:
 		return nil, errors.New("unsupported chain type")
 	}
@@ -290,21 +189,12 @@ func (Self *Chain) GetTransactionFromBlocks(chainType enum.ChainType, start int6
 // @return	_			*model.Transaction	交易信息
 // @return	_			error				异常信息
 func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*model.Transaction, int64, error) {
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		return nil, 0, err
-	}
-	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.RpcNodes) < 1 {
-		return nil, 0, errors.New("no chain config")
-	}
 	var transaction model.Transaction
 	var confirms int64
 	switch chainType {
-	case enum.ChainType_TRON:
+	case enum.ChainType_Tron:
 		tron, _ := GetTron()
-		client, err := tron.GetTronRpcClient(chainConfig.RpcNodes, chainConfig.ApiKeys)
+		client, err := tron.GetTronRpcClient()
 		if err != nil {
 			return nil, 0, err
 		}
@@ -313,18 +203,16 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*
 		if err != nil {
 			return nil, 0, err
 		}
-		tx, err := tron.DecodeTronTransaction(client, txHash)
+		tx, err := tron.DecodeTronTransaction(txHash)
 		if err != nil {
 			return nil, 0, err
 		}
 		transaction = *tx
 		confirms = block.BlockHeader.RawData.Number - transaction.Height
 	default:
-		if err != nil {
-			return nil, 0, errors.New("unsupported chain type")
-		}
+		return nil, 0, errors.New("unsupported chain type")
 	}
-	return &transaction, confirms, err
+	return &transaction, confirms, nil
 }
 
 // @title	根据地址获取交易
@@ -336,27 +224,17 @@ func (Self *Chain) DecodeTransaction(chainType enum.ChainType, txHash string) (*
 // @return	_			[]model.Transaction	交易信息
 // @return	_			error				异常信息
 func (Self *Chain) GetTransactionsByAddress(chainType enum.ChainType, address string, token *string, endTime time.Time) ([]model.Transaction, error) {
-	configModule, _ := GetConfig()
-	config, err := configModule.Load()
-	if err != nil {
-		return nil, err
-	}
-	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok || len(chainConfig.HttpNodes) < 1 {
-		return nil, errors.New("no chain config")
-	}
 	var transactions []model.Transaction
 	switch chainType {
-	case enum.ChainType_TRON:
+	case enum.ChainType_Tron:
 		tron, _ := GetTron()
-		transactions, err = tron.GetTronTransactionsByAddress(chainConfig.HttpNodes[0], address, token, endTime)
+		txs, err := tron.GetTronTransactionsByAddress(address, token, endTime)
 		if err != nil {
 			return nil, err
 		}
+		transactions = txs
 	default:
-		if err != nil {
-			return nil, errors.New("unsupported chain type")
-		}
+		return nil, errors.New("unsupported chain type")
 	}
 	return transactions, nil
 }

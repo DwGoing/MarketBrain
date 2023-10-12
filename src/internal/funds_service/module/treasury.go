@@ -54,7 +54,7 @@ func (Self *Treasury) CreateRechargeOrder(
 	chainModule, _ := GetChain()
 	var walletAddress string
 	switch chain {
-	case enum.ChainType_TRON:
+	case enum.ChainType_Tron:
 		account, err := chainModule.GetAccount(hd_wallet.Currency_TRON, walletIndex)
 		if err != nil {
 			return "", "", time.Time{}, err
@@ -196,10 +196,13 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 		return nil, err
 	}
 	chainType, _ := new(enum.ChainType).Parse(rechargeOrder.ChainType)
-	chainConfig, ok := config.ChainConfigs[chainType.String()]
-	if !ok {
-		return nil, errors.New("get chain config failed")
-	}
+
+	_ = config
+
+	// chainConfig, ok := config.ChainConfigs[chainType.String()]
+	// if !ok {
+	// 	return nil, errors.New("get chain config failed")
+	// }
 	chain, err := GetChain()
 	if err != nil {
 		return nil, err
@@ -230,7 +233,7 @@ func (Self *Treasury) checkRechargeOrderStatus(client *gorm.DB, rechargeOrder *m
 		}
 		if !tx.Result ||
 			time.UnixMilli(tx.TimeStamp).Before(rechargeOrder.CreatedAt) ||
-			*tx.Contract != chainConfig.USDT ||
+			// *tx.Contract != chainConfig.USDT ||
 			tx.To != rechargeOrder.WalletAddress ||
 			tx.Amount != rechargeOrder.Amount {
 			model.UpdateRechargeOrderRecords(client, model.UpdateOption{

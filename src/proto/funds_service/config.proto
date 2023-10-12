@@ -35,9 +35,9 @@ message LoadResponse {
     map<string, google.protobuf.Any> chains = 1;
     int64 expireTime = 2;
     string mnemonic = 3;
-    double walletCollectionThreshold = 4;
-    double minGasThreshold = 5;
-    double transferGasAmount = 6;
+    map<string, double> walletCollectionThreshold = 4;
+    map<string, double> minGasThreshold = 5;
+    map<string, double> transferGasAmount = 6;
     map<string, string> collectWallets = 7;
     map<string, string> paymentCurrencies = 8;
 }

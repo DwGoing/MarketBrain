@@ -10,15 +10,18 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/DwGoing/MarketBrain/internal/funds_service/model"
 	"github.com/DwGoing/MarketBrain/pkg/enum"
+	"github.com/DwGoing/MarketBrain/pkg/hd_wallet"
 	"github.com/ahmetb/go-linq"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/fbsobreira/gotron-sdk/pkg/client"
 	"github.com/fbsobreira/gotron-sdk/pkg/common"
+	"github.com/fbsobreira/gotron-sdk/pkg/proto/api"
 	"github.com/fbsobreira/gotron-sdk/pkg/proto/core"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -31,21 +34,32 @@ type Tron struct{}
 
 // @title	获取Tron客户端
 // @param	Self	*Tron				模块实例
-// @param	nodes 	[]string			链配置
-// @param	apiKeys []string			ApiKey集合
 // @return	_		*client.GrpcClient	客户端
 // @return	_		error				异常信息
-func (Self *Tron) GetTronRpcClient(nodes []string, apiKeys []string) (*client.GrpcClient, error) {
-	index, err := rand.Int(rand.Reader, big.NewInt(int64(len(nodes))))
+func (Self *Tron) GetTronRpcClient() (*client.GrpcClient, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
 	if err != nil {
 		return nil, err
 	}
-	grpcClient := client.NewGrpcClient(nodes[index.Int64()])
-	index, err = rand.Int(rand.Reader, big.NewInt(int64(len(apiKeys))))
+	chain, ok := config.Chains[enum.ChainType_Tron.String()]
+	if !ok {
+		return nil, errors.New("no chain config")
+	}
+	chainTron := chain.(model.Chain_Tron)
+	if len(chainTron.RpcNodes) < 1 || len(chainTron.ApiKeys) < 1 {
+		return nil, errors.New("no chain config")
+	}
+	index, err := rand.Int(rand.Reader, big.NewInt(int64(len(chainTron.RpcNodes))))
 	if err != nil {
 		return nil, err
 	}
-	err = grpcClient.SetAPIKey(apiKeys[index.Int64()])
+	grpcClient := client.NewGrpcClient(chainTron.RpcNodes[index.Int64()])
+	index, err = rand.Int(rand.Reader, big.NewInt(int64(len(chainTron.ApiKeys))))
+	if err != nil {
+		return nil, err
+	}
+	err = grpcClient.SetAPIKey(chainTron.ApiKeys[index.Int64()])
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +68,96 @@ func (Self *Tron) GetTronRpcClient(nodes []string, apiKeys []string) (*client.Gr
 		return nil, err
 	}
 	return grpcClient, nil
+}
+
+// @title	获取Tron客户端
+// @param	Self	*Tron			模块实例
+// @return	_		*http.Client	客户端
+// @return	_		error			异常信息
+func (Self *Tron) GetTronHttpClient() (*http.Client, error) {
+	configModule, _ := GetConfig()
+	config, err := configModule.Load()
+	if err != nil {
+		return nil, err
+	}
+	chain, ok := config.Chains[enum.ChainType_Tron.String()]
+	if !ok {
+		return nil, errors.New("no chain config")
+	}
+	chainTron := chain.(model.Chain_Tron)
+	if len(chainTron.HttpNodes) < 1 {
+		return nil, errors.New("no chain config")
+	}
+	index, err := rand.Int(rand.Reader, big.NewInt(int64(len(chainTron.RpcNodes))))
+	if err != nil {
+		return nil, err
+	}
+	transport := http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial(network, chainTron.HttpNodes[index.Int64()])
+		},
+	}
+	return &http.Client{
+		Transport: &transport,
+	}, nil
+}
+
+// @title	获取当前高度
+// @param	Self		*Tron			模块实例
+// @return	_			int64			当前高度
+// @return	_			error			异常信息
+func (Self *Tron) GetCurrentHeight() (int64, error) {
+	client, err := Self.GetTronRpcClient()
+	if err != nil {
+		return 0, err
+	}
+	block, err := client.GetNowBlock()
+	if err != nil {
+		return 0, err
+	}
+	return block.BlockHeader.RawData.Number, nil
+}
+
+// @title	获取钱包余额
+// @param	Self		*Tron			模块实例
+// @param	contract	*string			合约地址
+// @param	address		string			钱包地址
+// @return	_			float64			余额
+// @return	_			error			异常信息
+func (Self *Tron) GetBalance(contract *string, address string) (float64, error) {
+	client, err := Self.GetTronRpcClient()
+	if err != nil {
+		return 0, err
+	}
+	var balance float64
+	if contract == nil {
+		account, err := client.GetAccount(address)
+		if err != nil {
+			return 0, err
+		}
+		balance, _ = new(big.Float).Quo(new(big.Float).SetInt64(account.Balance), big.NewFloat(1e6)).Float64()
+	} else {
+		balanceBigInt, err := client.TRC20ContractBalance(address, *contract)
+		if err != nil {
+			return 0, err
+		}
+		decimalsBigInt, err := client.TRC20GetDecimals(*contract)
+		if err != nil {
+			return 0, err
+		}
+		balance, _ = new(big.Float).Quo(new(big.Float).SetInt(balanceBigInt), big.NewFloat(math.Pow10(int(decimalsBigInt.Int64())))).Float64()
+	}
+	return balance, nil
 }
 
 // @title	发送Tron交易
@@ -104,14 +208,76 @@ func (Self *Tron) SendTronTransaction(client *client.GrpcClient, privateKey *ecd
 	return transaction, err
 }
 
+// @title	发送代币
+// @param	Self		*Tron				模块实例
+// @param	token		*string				合约地址
+// @param	from		*hd_wallet.Account	发送账户
+// @param	to			string				接收地址
+// @param	amount		float64				数量
+// @return	_			error				异常信息
+func (Self *Tron) Transfer(token *string, from *hd_wallet.Account, to string, amount float64) (string, error) {
+	client, err := Self.GetTronRpcClient()
+	if err != nil {
+		return "", err
+	}
+	var tx *api.TransactionExtention
+	if token == nil {
+		amountInt64, _ := new(big.Float).Mul(big.NewFloat(amount), big.NewFloat(1e6)).Int64()
+		tx, err = client.Transfer(from.GetAddress(), to, amountInt64)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		decimalsBigInt, err := client.TRC20GetDecimals(*token)
+		if err != nil {
+			return "", err
+		}
+		amountBigInt, _ := new(big.Float).Mul(big.NewFloat(amount), big.NewFloat(math.Pow10(int(decimalsBigInt.Int64())))).Int(new(big.Int))
+		tx, err = client.TRC20Send(from.GetAddress(), to, *token, amountBigInt, 300000000)
+		if err != nil {
+			return "", err
+		}
+	}
+	txInfo, err := Self.SendTronTransaction(client, from.PrivateKey.ToECDSA(), tx.Transaction, true)
+	if err != nil {
+		return "", err
+	}
+	return common.Bytes2Hex(txInfo.GetId()), nil
+}
+
+// @title	查询块信息
+// @param	Self		*Chain				模块实例
+// @param	number		int64				块高
+// @return	_			*model.Block		块信息
+// @return	_			error				异常信息
+func (Self *Tron) GetBlockByNumber(number int64) (*model.Block, error) {
+	result := model.Block{}
+	client, err := Self.GetTronRpcClient()
+	if err != nil {
+		return nil, err
+	}
+	block, err := client.GetBlockByNum(number)
+	if err != nil {
+		return nil, err
+	}
+	result.ChainType = enum.ChainType_Tron
+	result.Height = block.BlockHeader.RawData.Number
+	result.TimeStamp = block.BlockHeader.RawData.Timestamp
+	return &result, nil
+}
+
 // @title	解析交易
 // @param	Self		*Tron				模块实例
 // @param	txHash		string				交易Hash
 // @return	_			*model.Transaction	交易信息
 // @return	_			error				异常信息
-func (Self *Tron) DecodeTronTransaction(client *client.GrpcClient, txHash string) (*model.Transaction, error) {
+func (Self *Tron) DecodeTronTransaction(txHash string) (*model.Transaction, error) {
+	client, err := Self.GetTronRpcClient()
+	if err != nil {
+		return nil, err
+	}
 	result := model.Transaction{
-		ChainType: enum.ChainType_TRON,
+		ChainType: enum.ChainType_Tron,
 		Hash:      txHash,
 	}
 	tx, err := client.GetTransactionInfoByID(txHash)
@@ -177,12 +343,15 @@ func (Self *Tron) DecodeTronTransaction(client *client.GrpcClient, txHash string
 
 // @title	从块中获取交易
 // @param	Self		*Tron					模块实例
-// @param	client		*client.GrpcClient		客户端
 // @param	start		int64					开始高度
 // @param	end			int64					结束高度
 // @return	_			[]model.Transaction		交易信息
 // @return	_			error					异常信息
-func (Self *Tron) GetTronTransactionsFromBlocks(client *client.GrpcClient, start int64, end int64) ([]model.Transaction, error) {
+func (Self *Tron) GetTronTransactionsFromBlocks(start int64, end int64) ([]model.Transaction, error) {
+	client, err := Self.GetTronRpcClient()
+	if err != nil {
+		return nil, err
+	}
 	blocklist, err := client.GetBlockByLimitNext(start, end)
 	if err != nil {
 		return nil, err
@@ -192,7 +361,7 @@ func (Self *Tron) GetTronTransactionsFromBlocks(client *client.GrpcClient, start
 	for _, block := range blocks {
 		transactions := block.GetTransactions()
 		for _, transaction := range transactions {
-			tx, err := Self.DecodeTronTransaction(client, common.Bytes2Hex(transaction.GetTxid()))
+			tx, err := Self.DecodeTronTransaction(common.Bytes2Hex(transaction.GetTxid()))
 			if err != nil {
 				continue
 			}
@@ -227,20 +396,19 @@ type GetTronTransactionsByAddressResponse_Trc20Transaction_TokenInfo struct {
 // @param	endTime		time.Time			结束时间
 // @return	_			[]model.Transaction	交易信息
 // @return	_			error				异常信息
-func (Self *Tron) GetTronTransactionsByAddress(url string, address string, token *string, endTime time.Time) ([]model.Transaction, error) {
+func (Self *Tron) GetTronTransactionsByAddress(address string, token *string, endTime time.Time) ([]model.Transaction, error) {
+	client, err := Self.GetTronHttpClient()
+	if err != nil {
+		return nil, err
+	}
 	var transactions []model.Transaction
 	if token == nil {
 		// 未实现
 	} else {
-		url := fmt.Sprintf("%s/v1/accounts/%s/transactions/trc20?only_confirmed=true&contract_address=%s&min_timestamp=%d",
-			url, address, *token, endTime.UnixMilli(),
+		url := fmt.Sprintf("/v1/accounts/%s/transactions/trc20?only_confirmed=true&contract_address=%s&min_timestamp=%d",
+			address, *token, endTime.UnixMilli(),
 		)
-		request, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-		request.Header.Add("accept", "application/json")
-		response, err := http.DefaultClient.Do(request)
+		response, err := client.Get(url)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +426,7 @@ func (Self *Tron) GetTronTransactionsByAddress(url string, address string, token
 			amountBitInt, _ := new(big.Int).SetString(item.Value, 10)
 			amount, _ := new(big.Float).Quo(new(big.Float).SetInt(amountBitInt), big.NewFloat(math.Pow10(int(item.TokenInfo.Decimals)))).Float64()
 			return model.Transaction{
-				ChainType: enum.ChainType_TRON,
+				ChainType: enum.ChainType_Tron,
 				Hash:      item.TransactionId,
 				TimeStamp: item.BlockTimestamp,
 				Contract:  &item.TokenInfo.Address,

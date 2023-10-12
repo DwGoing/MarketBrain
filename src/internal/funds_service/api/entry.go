@@ -12,6 +12,13 @@ func RootApi(engine *gin.Engine) {
 		zap.S().Warnf("Notify ===> ok %s", body)
 		Response.Success(ctx, nil)
 	})
+	engine.POST("account", func(ctx *gin.Context) {
+		Response.Success(ctx, map[string]any{
+			"data": map[string]any{
+				"id": 111,
+			},
+		})
+	})
 }
 
 // @title	Confgig Rpc接口
